@@ -50,6 +50,21 @@ So we have the machine specifying the behaviour of our image search. Let's see h
 that React using our `Machine` component.
 
 ```javascript
+export class GalleryApp extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    const { query, photo, items, trigger, gallery: galleryState } = this.props;
+
+    return div(".ui-app", { 'data-state': galleryState }, [
+      h(Form, { galleryState, onSubmit: trigger('onSubmit'), onClick: trigger('onCancelClick') }, []),
+      h(Gallery, { galleryState, items, onClick: trigger('onGalleryClick') }, []),
+      h(Photo, { galleryState, photo, onClick: trigger('onPhotoClick') }, [])
+    ])
+  }
+}
 
 const renderGalleryApp = state => (extendedState, eventData, fsmSettings) => {
   const { query, items, photo } = extendedState;
@@ -154,8 +169,8 @@ Now let's explain a bit what is going on here.
 
 First of all, we use `React.createElement` but you 
 could just as well use jsx `<Machine ... />`, that really is but an implementation detail. In our
- implementation we are mostly using core React API and [hyperscript](https://github.com/mlmorg/react-hyperscript) rather than jsx. Then keep in mind that when we write the 
- machine, we refer to the state machine whose graph has been given previously. When we want to 
+ implementation we are mostly using core React API and [hyperscript](https://github.com/mlmorg/react-hyperscript) rather than jsx. Then keep in mind that when we write 'the 
+ machine', we refer to the state machine whose graph has been given previously. When we want to 
  refer to the `Machine` component, we will always specifically precise that.
  
 Our state machine is basically a function which takes an input and returns an output. The inputs 
@@ -246,5 +261,6 @@ who may need it. For instance the `GalleryApp` component is written as follows :
   }
 ```
 
+**TODO : explain controlled component / uncontrolled component!!**
 **TODO : do a code pen**
 **TODO : command the code with explanation about trigger?**
