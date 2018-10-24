@@ -12,8 +12,7 @@ and specific enough to be able to take advantage as much as possible of the  `Re
 and API.
 
 # API
-## <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, 
-componentDidUpdate, componentWillUpdate/>
+##` <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
