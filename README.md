@@ -74,7 +74,7 @@ const renderGalleryApp = machineState => (extendedState, eventData, fsmSettings)
 
 export const machines = {
   imageGallery: {
-    ... machine definition goes here, cf. visualization ...
+    ... machine definition (not included here, cf. visualization) ...
     inject: new Flipping(),
     entryActions: {
       loading: (extendedState, eventData, fsmSettings) => {
