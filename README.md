@@ -77,30 +77,10 @@ const renderGalleryApp = machineState => (extendedState, eventData, fsmSettings)
 
 export const machines = {
   imageGallery: {
-    ... machine definition (not included here, cf. visualization) ...
-    inject: new Flipping(),
-    entryActions: {
-      loading: (extendedState, eventData, fsmSettings) => {
-        const { items, photo } = extendedState;
-        const query = eventData;
-        const searchCommand = {
-          command: COMMAND_SEARCH,
-          params: query
-        };
-        const renderGalleryAction = renderAction(trigger =>
-          h(GalleryApp, { query, items, trigger, photo, gallery: 'loading' }, [])
-        );
-
-        return {
-          outputs: [searchCommand, renderGalleryAction.outputs],
-          updates: NO_STATE_UPDATE
-        }
-      },
-      photo: renderGalleryApp('photo'),
-      gallery: renderGalleryApp('gallery'),
-      error: renderGalleryApp('error'),
-      start: renderGalleryApp('start'),
-    },
+    initialExtendedState: { query: '', items: [], photo: undefined },
+    states: { start: '', loading: '', gallery: '', error: '', photo: '' },
+    events: ['SEARCH', 'SEARCH_SUCCESS', 'SEARCH_FAILURE', 'CANCEL_SEARCH', 'SELECT_PHOTO', 'EXIT_PHOTO'],
+    transitions : ... transitions not included here, cf. visualization) ...,
     intentSourceFactory: rawEventSource => rawEventSource
       .map(ev => {
         const { eventName, eventData: e, ref } = destructureEvent(ev);
@@ -135,6 +115,28 @@ export const machines = {
         return NO_INTENT
       })
       .filter(x => x !== NO_INTENT),
+    entryActions: {
+      loading: (extendedState, eventData, fsmSettings) => {
+        const { items, photo } = extendedState;
+        const query = eventData;
+        const searchCommand = {
+          command: COMMAND_SEARCH,
+          params: query
+        };
+        const renderGalleryAction = renderAction(trigger =>
+          h(GalleryApp, { query, items, trigger, photo, gallery: 'loading' }, [])
+        );
+
+        return {
+          outputs: [searchCommand, renderGalleryAction.outputs],
+          updates: NO_STATE_UPDATE
+        }
+      },
+      photo: renderGalleryApp('photo'),
+      gallery: renderGalleryApp('gallery'),
+      error: renderGalleryApp('error'),
+      start: renderGalleryApp('start'),
+    },
     actionExecutorSpecs: {
       [COMMAND_SEARCH]: (trigger, query) => {
         helpers.runSearchQuery(query)
@@ -146,6 +148,7 @@ export const machines = {
           });
       }
     },
+    inject: new Flipping(),
     componentDidUpdate: flipping => () => {flipping.read();},
     componentWillUpdate: flipping => () => {flipping.flip();}
   }
