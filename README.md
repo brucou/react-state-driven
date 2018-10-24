@@ -66,11 +66,10 @@ export class GalleryApp extends React.Component {
   }
 }
 
-const renderGalleryApp = state => (extendedState, eventData, fsmSettings) => {
+const renderGalleryApp = machineState => (extendedState, eventData, fsmSettings) => {
   const { query, items, photo } = extendedState;
-
-  return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: state }, 
-  []))
+ 
+  return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: machineState }, []))
 }
 
 export const machines = {
