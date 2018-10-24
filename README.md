@@ -8,8 +8,11 @@ is a number of state machine libraries in the field with varying design objectiv
 
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
-and specific enough to be able to take advantage as much as possible of the  `React` ecosystem 
-and API.
+and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
+and API. In particular :
+
+- it should be seamless to use both controlled and uncontrolled components
+- it should be possible to use without risk of interference features like `Context`
 
 # API
 ##` <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, componentDidUpdate, componentWillUpdate />`
@@ -230,7 +233,7 @@ will always be as described.
 # Tips and gotchas
 - most of the time `intentSourceFactory` will just change the name of the event. You can 
 perfectly if that makes sense, use `intentSourceFactory : x => x` and directly pass on the raw 
-events to the machine as input. That is fine as long as the machine never have to perform an 
+events to the machine as input. That is fine as long as the machine never has to perform an 
 effect (this is one of the machine's contract). In our example, you will notice that we are doing
  `e.preventDefault`, so our example does not qualify for such a simplification of 
  `intentSourceFactory`. Furthermore, for documentation and design purpose, it makes sense to use 
