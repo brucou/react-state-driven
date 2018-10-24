@@ -35,7 +35,7 @@ action??
 ### Example
 To showcase 
 usage of our react component with our machine library, we will implement an [image search 
-application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/). 
+application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
 That application basically takes an input from the user, looks up images related
  to that search input, and displays it. The user can then click on a particular image to see it 
  in more details. The corresponding machine is here :
