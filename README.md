@@ -80,9 +80,9 @@ export const machines = {
         }
       },
       photo: renderGalleryApp('photo'),
-      gallery: renderGalleryApp('gallery),
-      error: renderGalleryApp('error),
-      start: renderGalleryApp('start),
+      gallery: renderGalleryApp('gallery'),
+      error: renderGalleryApp('error'),
+      start: renderGalleryApp('start'),
     },
     intentSourceFactory: rawEventSource => rawEventSource
       .map(ev => {
