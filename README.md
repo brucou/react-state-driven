@@ -50,6 +50,14 @@ So we have the machine specifying the behaviour of our image search. Let's see h
 that React using our `Machine` component.
 
 ```javascript
+
+const renderGalleryApp = state => (extendedState, eventData, fsmSettings) => {
+  const { query, items, photo } = extendedState;
+
+  return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: state }, 
+  []))
+}
+
 export const machines = {
   imageGallery: {
     ... machine definition goes here, cf. visualization ...
@@ -71,26 +79,10 @@ export const machines = {
           updates: NO_STATE_UPDATE
         }
       },
-      photo: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'photo' }, []));
-      },
-      gallery: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'gallery' }, []))
-      },
-      error: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'error' }, []))
-      },
-      start: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'start' }, []))
-      },
+      photo: renderGalleryApp('photo'),
+      gallery: renderGalleryApp('gallery),
+      error: renderGalleryApp('error),
+      start: renderGalleryApp('start),
     },
     intentSourceFactory: rawEventSource => rawEventSource
       .map(ev => {
