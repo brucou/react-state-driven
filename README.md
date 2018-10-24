@@ -44,8 +44,7 @@ That application basically takes an input from the user, looks up images related
 
 For illustration, the user interface starts like this :
 
-![image search interface]([Imgur](https://i.imgur.com/mDQQTX8.png?1)) 
-
+![image search interface](https://i.imgur.com/mDQQTX8.png?1) 
 
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that React using our `Machine` component.
