@@ -30,7 +30,10 @@ action??
 ### Semantics
 ** TODO ** draw the architecture events -> intents -> machine -> commands -> effects
 ** TODO ** explain trigger in component
-** TODO ** terminology raw events, machine input or machine events, intent, actions, commands
+** TODO ** terminology raw events, machine input or machine events, intent, actions, commands. 
+Some arguments might become rawEvent and eventData for the machine event might be inputData?? I 
+think I should stick to input for machine. But then outputs are commands... but only for user 
+interfaces. But then if use input for machine, do I still need raw events?
 
 ### Example
 To showcase 
