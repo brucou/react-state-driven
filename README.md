@@ -23,7 +23,7 @@ In a traditional architecture, a simple scenario would be expressed as follows :
 
 What we can derive from that is that the application is interfacing with other systems : the user
  interface and what we call external systems. The application responsibility is to translate user
-  actions on the user interface into actions on the external systems, execute those actions and 
+  actions on the user interface into commands on the external systems, execute those commands and 
   deal with their result.
 
 In our proposed architecture, the same scenario would become :
@@ -96,7 +96,7 @@ only concern our implementation of the `<Machine /` component.
 .yield` method, with start being sugar for `.yield({init: some data})`.
 
 # API
-##` <Machine fsmSpecs, actionExecutorSpecs, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
+##` <Machine fsmSpecs, commandHandlers, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
@@ -253,13 +253,13 @@ could just as well use jsx `<Machine ... />`, that really is but an implementati
  machine', we refer to the state machine whose graph has been given previously. When we want to 
  refer to the `Machine` component, we will always specifically precise that.
  
-Our state machine is basically a function which takes an input and returns an output. The inputs 
+Our state machine is basically a function which takes an input and returns outputs. The inputs 
 received by the machine are meant to be mapped to events triggered by the user through the user 
-interface. The outputs from the machine are commands representing what action/effect to perform 
+interface. The outputs from the machine are commands representing what commands/effects to perform 
 on the interfaced system(s). Some commands always occur when transitioning to a given control 
 state of the state machine : we gather those commands in `entryActions`. The mapping between 
-user/system events and machine input is performed by `intentSourceFactory`. The commands output 
-by the machine are mapped to executors gathered in `actionExecutorSpecs` so our `Machine` 
+user/system events and machine input is performed by `preprocessor`. The commands output 
+by the machine are mapped to executors gathered in `commandHandlers` so our `Machine` 
 component knows how to run a command when it receives one. `componentWillUpdate` and 
 `componentDidUpdate` are overriding default behaviour of the eponym lifecycle hooks for the 
 `Machine` component. 
@@ -283,7 +283,7 @@ function of the input received by the machine and the control state the machine 
   `GalleryApp`, and transitions to `loading` control state 
   - The `Machine` component executes the two commands : the gallery is rendered (this time with a
    `Cancel` button appearing), and an API call is made. Depending on the eventual result of that 
-   API call, the action executor will trigger a `SEARCH_SUCCESS` or `SEARCH_FAILURE` event.
+   API call, the command handler will trigger a `SEARCH_SUCCESS` or `SEARCH_FAILURE` event.
 - The search is successful : the `SEARCH_SUCCESS` event is transformed into a machine 
 input `{SEARCH_SUCCESS: items}`. 
   - The machine, per its specifications, updates its extended state `items` property, and outputs
@@ -292,7 +292,7 @@ input `{SEARCH_SUCCESS: items}`.
   - the user or an interfaced system (network, etc.) triggers an event X,
   - that event will be transformed into a machine input (as per `intentSourceFactory`), 
   - the machine will, as per its specs, update its extended state and issue command(s) 
-  - Issued command will be executed by the `Machine` component, as per `actionExecutorSpecs`
+  - Issued command will be executed by the `Machine` component, as per `commandHandlers`
 
 Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
@@ -399,7 +399,7 @@ perfectly if that makes sense, use `preprocessor : x => x` and directly pass on 
 events to the machine as input. That is fine as long as the machine never has to perform an 
 effect (this is one of the machine's contract). In our example, you will notice that we are doing
  `e.persist()`, so our example does not qualify for such a simplification of 
- `preprocessor`. Furthermore, for documentation and design purpose, it makes sense to use 
+ `preprocessor`. Furthermore, for documentation and design purposes, it makes sense to use 
  any input nomenclature which links to the domain rather than the user interface. As we have 
  seen, what is a click on a button is a search intent to the machine, and results in a search 
  command to the command executor. 
