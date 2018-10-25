@@ -28,9 +28,40 @@ In our proposed architecture, the same scenario would become :
 
 ![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
 
-In that architecture, the application is refactored into a mediator, a preprocessor and a state 
-machine.
+In that architecture, the application is refactored into a mediator, a preprocessor, a state 
+machine, and a command handler. The application is thus split into smaller parts which address 
+specific concerns :
+- the preprocessor translates user interface events into inputs for the state machine
+- the state machine computes the commands to execute as a result of its present and past inputs, 
+or, what is equivalent, its present input and current state 
+- the command handler interpret and execute incoming commands
+- the mediator coordinates the preprocessor, the state machine and the command handler 
 
+Apart from the separation of concerns we have achieved, we also have successfully reduced 
+the incidental complexity of our implementation :
+- the mediator algorithm is the same independently of the pieces it coordinates. This means it 
+can be written and tested once, then reused at will. This is our `<Machine />` component
+- the state machine is a function which **performs no effects**, and whose output depends 
+exclusively on present and past input. We will use the term *causal* functions for such 
+functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
+exhibit the same property[^1]. In relation with state machine, it is the same to say that 
+an output depends exclusively on past and present inputs and that an output exclusively depend 
+on current state, and present input[^2]. The causality property means state machines are a breeze
+ to reason about and test (well, not as much as pure functions, but infinitely better than 
+ effectful functions - aka procedures).
+- only the preprocessor can perform effects on the user interface
+- only the command handler can perform effects on the external systems
+
+We also have achieved greater modularity: our parts are coupled only through their interface. For
+ instance, we use in our implementation `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
+   [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
+    if the need be, by simply building interface adapters.
+
+{^1]: Another term used elsewhere is *deterministic* functions, but we 
+      found that term could be confusing.          
+[^2]: The past inputs are precisely what makes the state of the 
+      machine.
+      
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
 and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
