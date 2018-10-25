@@ -14,6 +14,11 @@ This document is structured as follows :
 # Modelling user interfaces with state machines
 We are going all along to refer to a image search application example to illustrate our 
 argumentation. Cf. [Example section](#example) for more details.
+
+A simple scenario is as follows :
+
+![image search basic scenario](assets/Image%20search%20scenario.png)
+
  
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
