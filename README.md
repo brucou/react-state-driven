@@ -156,7 +156,7 @@ export const machines = {
     states: { start: '', loading: '', gallery: '', error: '', photo: '' },
     events: ['SEARCH', 'SEARCH_SUCCESS', 'SEARCH_FAILURE', 'CANCEL_SEARCH', 'SELECT_PHOTO', 'EXIT_PHOTO'],
     transitions : ... transitions not included here, cf. visualization) ...,
-    intentSourceFactory: rawEventSource => rawEventSource
+    preprocessor: rawEventSource => rawEventSource
       .map(ev => {
         const { eventName, eventData: e, ref } = destructureEvent(ev);
 
@@ -212,7 +212,7 @@ export const machines = {
       error: renderGalleryApp('error'),
       start: renderGalleryApp('start'),
     },
-    actionExecutorSpecs: {
+    commandHandlers: {
       [COMMAND_SEARCH]: (trigger, query) => {
         helpers.runSearchQuery(query)
           .then(data => {
@@ -231,9 +231,9 @@ export const machines = {
 
 const App = machine => React.createElement(Machine, {
   entryActions: machine.entryActions,
-  intentSourceFactory: machine.intentSourceFactory,
+  preprocessor: machine.preprocessor,
   fsmSpecs: machine,
-  actionExecutorSpecs: machine.actionExecutorSpecs,
+  commandHandlers: machine.commandHandlers,
   settings: {},
   componentWillUpdate : (machine.componentWillUpdate||noop)(machine.inject),
   componentDidUpdate: (machine.componentDidUpdate||noop)(machine.inject)

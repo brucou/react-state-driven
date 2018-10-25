@@ -68,6 +68,8 @@ export class Machine extends Component {
   componentDidMount() {
     const machineComponent = this;
     const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+    assertPropsContract(machineComponent.props);
+
     // NOTE : the preprocessor can be any library but must replicate the relevant Rx API
     const Rx = subjectFactory;
     this.rawEventSource = new Rx.Subject();
@@ -107,4 +109,10 @@ export class Machine extends Component {
     const machineComponent = this;
     return machineComponent.state.render || null;
   }
+}
+
+function assertPropsContract(props){
+  const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+  if (!subjectFactory) throw `<Machine/> : subjectFactory props has a falsy value!`
+  if (!fsmSpecs) throw `<Machine/> : fsmSpecs props has a falsy value! Should be specifications for the state machine!`
 }
