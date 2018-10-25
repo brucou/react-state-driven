@@ -112,7 +112,7 @@ export class Machine extends Component {
 }
 
 function assertPropsContract(props){
-  const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+  const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = props;
   if (!subjectFactory) throw `<Machine/> : subjectFactory props has a falsy value!`
   if (!fsmSpecs) throw `<Machine/> : fsmSpecs props has a falsy value! Should be specifications for the state machine!`
 }
