@@ -53,8 +53,12 @@ an output depends exclusively on past and present inputs and that an output excl
 on current state, and present input[^2]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
  effectful functions).
-- only the preprocessor and mediator can perform effects on the user interface
-- only the command handler can perform effects on the external systems
+- Command handlers are pretty generic pieces of code. An example could be code to fetch a 
+resource. That code is written and tested once, and then reused for any resource. Additionally, 
+only the command handler can perform effects on the external systems, which helps tracing and 
+debugging. 
+- only the preprocessor and mediator can perform effects on the user interface, which helps 
+tracing and debugging. 
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
  instance, we use in our implementation `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
