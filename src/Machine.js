@@ -1,6 +1,6 @@
 import { Component } from "react";
 import { create_state_machine, decorateWithEntryActions, NO_OUTPUT } from "state-transducer";
-import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties";
+import { COMMAND_RENDER, ERR_COMMAND_HANDLERS } from "./properties";
 
 const identity = x => x;
 
@@ -20,7 +20,7 @@ export function triggerFnFactory(rawEventSource) {
   };
 }
 
-export function commandHandlerFactory(component, trigger, actionExecutorSpecs) {
+export function commandHandlerFactory(component, trigger, commandHandlers) {
   return actions => {
     if (actions === NO_OUTPUT) {return;}
 
@@ -35,9 +35,9 @@ export function commandHandlerFactory(component, trigger, actionExecutorSpecs) {
         return component.setState({ render: params(trigger) });
       }
 
-      const execFn = actionExecutorSpecs[command];
+      const execFn = commandHandlers[command];
       if (!execFn || typeof execFn !== "function") {
-        throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command));
+        throw new Error(ERR_COMMAND_HANDLERS(command));
       }
       // NOTE :we choose this form to allow for currying down the road
       return execFn(trigger, params);
