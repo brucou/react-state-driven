@@ -43,7 +43,8 @@ handler
 Apart from the separation of concerns we have achieved, we also have successfully reduced 
 the incidental complexity of our implementation :
 - the mediator algorithm is the same independently of the pieces it coordinates. This means it 
-can be written and tested once, then reused at will. This is our `<Machine />` component
+can be written and tested once, then reused at will. This is our `<Machine />` component. This is
+ a code you do not have to write anymore.
 - the state machine is a function which **performs no effects**, and whose output depends 
 exclusively on present and past input. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
