@@ -8,8 +8,10 @@ is a number of state machine libraries in the field with varying design objectiv
 
 This document is structured as follows :
 
-- we quickly present the rationale behind modelling user interfaces with state machines
-- TODO
+- we quickly present the rationale behind modelling user interfaces with state machines and the 
+resulting architecture
+- we continue with our API design goals
+- we finally explain and document the actual API together with a not-so-trivial example of use
 
 # Modelling user interfaces with state machines
 We are going all along to refer to a image search application example to illustrate our 
@@ -75,6 +77,13 @@ and API. In particular :
 
 - it should be seamless to use both controlled and uncontrolled components
 - it should be possible to use without risk of interference standard React features like `Context`
+- it should use the absolute minimum React features internally, in order to favor for instance a 
+painless port to React copycats (Preact, etc.)
+
+As a result of this design goals :
+- we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
+- the component user can of course the whole extent of the API at disposal, those restrictions 
+only concern our implementation of the `<Machine /` component.
 
 # API
 ##` <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, componentDidUpdate, componentWillUpdate />`
@@ -93,7 +102,6 @@ Our `Machine` component expects some props but does not expect children componen
 action??
 
 ### Semantics
-** TODO ** draw the architecture events -> intents -> machine -> commands -> effects
 ** TODO ** explain trigger in component
 ** TODO ** terminology raw events, machine input or machine events, intent, actions, commands. 
 Some arguments might become rawEvent and eventData for the machine event might be inputData?? I 
