@@ -1,0 +1,17 @@
+title Image search scenario
+
+User ->  User interface : 'c'
+User ->  User interface : 'a'
+User ->  User interface : 't'
+User ->  User interface : Search
+note right of User interface : User searches for 'cat' images
+User interface -> +Application : button click
+Application -> External systems : API call
+Application -> -User interface : 
+User interface ->  User : 
+note right of External systems : successful search
+External systems -> +Application : API response
+Application -> -User interface : render
+note right of User interface : Application displays cat images
+User interface ->  -User : 
+

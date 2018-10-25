@@ -6,13 +6,22 @@ is a number of state machine libraries in the field with varying design objectiv
  system, in order to produce the necessary effects (user events, system events, user actions). We
   present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
 
+This document is structured as follows :
+
+- we quickly present the rationale behind modelling user interfaces with state machines
+- TODO
+
+# Modelling user interfaces with state machines
+We are going all along to refer to a image search application example to illustrate our 
+argumentation. Cf. [Example section](#example) for more details.
+ 
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
 and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
 and API. In particular :
 
 - it should be seamless to use both controlled and uncontrolled components
-- it should be possible to use without risk of interference features like `Context`
+- it should be possible to use without risk of interference standard React features like `Context`
 
 # API
 ##` <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, componentDidUpdate, componentWillUpdate />`
@@ -20,7 +29,7 @@ and API. In particular :
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
-props reflects the specifications of the underlying machine, pre-processing of interfaced 
+props reflect : the specifications of the underlying machine, pre-processing of interfaced 
 system's raw events, functions executing machine commands and performing effects on the 
 interfaced systems. They also include settings for machine parameterization, and 
 `componentDidUpdate` and `componentWillUpdate` props to integrate with the relevant React API. 
