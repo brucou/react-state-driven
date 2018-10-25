@@ -40,7 +40,7 @@
  * API caller.
  */
 /** @typedef {function (ExtendedState, EventData) : Boolean} FSM_Predicate */
-/** @typedef {{updateState :: Function(ExtendedState, ExtendedStateUpdate) : ExtendedState, ...}} FSM_Settings */
+/** @typedef {{updateState :: ExtendedStateReducer, ...}} FSM_Settings */
 /** @typedef {{merge: MergeObsFn, from: FromObsFn, filter: FilterObsFn, map: MapObsFn, share:ShareObsFn, ...}} FSM$_Settings */
 /**
  * @typedef {function (Array<Observable>) : Observable} MergeObsFn Similar to Rxjs v4's `Rx.Observable.merge`. Takes
@@ -103,5 +103,8 @@
  */
 /**
  * @typedef {*} ExtendedStateUpdate
+ */
+/**
+ * @typedef {function(ExtendedState, ExtendedStateUpdate): ExtendedState} ExtendedStateReducer
  */
 /** @typedef {* | NO_OUTPUT} MachineOutput well it is preferrable that that be an object instead of a primitive */

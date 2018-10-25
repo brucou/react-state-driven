@@ -91,27 +91,17 @@ As a result of these design goals :
 only concern our implementation of the `<Machine /` component.
 
 # API
-##` <Machine intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings, componentDidUpdate, componentWillUpdate />`
+##` <Machine fsmSpecs, actionExecutorSpecs, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
 props reflect : the specifications of the underlying machine, pre-processing of interfaced 
 system's raw events, functions executing machine commands and performing effects on the 
-interfaced systems. They also include settings for machine parameterization, and 
-`componentDidUpdate` and `componentWillUpdate` props to integrate with the relevant React API. 
+interfaced systems. They also include settings for machine parameterization (in particular 
+defining how to update extended state), and  `componentDidUpdate` and `componentWillUpdate` props
+ to integrate with the relevant React API. 
 Our `Machine` component expects some props but does not expect children components. 
-
-### Types
-**TODO** That should explain the trigger and stuff. But first decide on terminology : command or 
-action??
-
-### Semantics
-** TODO ** explain trigger in component
-** TODO ** terminology raw events, machine input or machine events, intent, actions, commands. 
-Some arguments might become rawEvent and eventData for the machine event might be inputData?? I 
-think I should stick to input for machine. But then outputs are commands... but only for user 
-interfaces. But then if use input for machine, do I still need raw events?
 
 ### Example
 To showcase 
@@ -299,21 +289,112 @@ input `{SEARCH_SUCCESS: items}`.
   - the machine will, as per its specs, update its extended state and issue command(s) 
   - Issued command will be executed by the `Machine` component, as per `actionExecutorSpecs`
 
-Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`]
-(https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
+Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
 (`flipping.flip()`). 
 
 This is it! Whatever the machine passed as parameter to the `Machine` component, its behaviour 
 will always be as described.
 
+### Types
+Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
+
+We only reproduce here the key types :
+
+```javascript
+// Commands
+/**
+ * @typedef {RenderCommand | SystemCommand} Command
+ */
+/**
+ * @typedef {{command : COMMAND_RENDER, params : (function (trigger:RawEventDispatcher):React.Component)  }} RenderCommand
+ */
+/**
+ * @typedef {{command : CommandName, params : * }} SystemCommand
+ */
+// Mediator
+/**
+ * @typedef {Object} MachineProps
+ * @property {EventPreprocessor} [preprocessor = x=>x]
+ * @property {FSM_Def} fsmSpecs machine definition (typically events, states and transitions)
+ * @property {{updateState : ExtendedStateReducer, ...}} settings Settings which will be passed to the state machine which
+ * allows to customize its behaviour. At the minimum, it should include a state reducer by which the machine updates
+ * its extended state.
+ * @property {Object.<CommandName, CommandHandler>} commandHandlers
+ * @property {Object.<ControlState, ActionFactory>} entryActions
+ * @property {{Subject : SubjectFactory}} subjectFactory Subject factory. A subject is an entity which is both an
+ * observer and an observable, i.e. it can both receive and emit data. A typical value for this parameter could be
+ * Rx (from Rxjs).
+ * The factory is called with `new`. The returned object must have all methods in `Combinators`
+ */
+/**
+ * @typedef {function (RawEventSource) : MachineEventSource} EventPreprocessor
+ */
+/**
+ * @typedef {function():Subject} SubjectFactory
+ */
+/**
+ * @typedef {function(RawEventDispatcher, params : *): *} CommandHandler
+ */
+/**
+ * @typedef {function(RawEventName):RawEventCallback} RawEventDispatcher
+ */
+/**
+ * @typedef {function(RawEventData, React.ElementRef, ...):*} RawEventCallback
+ */
+/**
+ * @typedef {function(Observable, ...):Observable} EventCombinator
+ */
+/**
+ * @type {{map: EventCombinator, filter:EventCombinator, startWith:EventCombinator}} Combinators
+ */
+// FSM
+/**
+ * @typedef {function(ExtendedState, ExtendedStateUpdate): ExtendedState} ExtendedStateReducer
+ */
+```
+
+### Semantics
+- The `<Machine />` component :
+  - initializes the state machine whose definition is passed as parameter
+  - initializes the raw event source (subject) which which receives and forward all raw events 
+  (user  events and  system events), and the event emitter emitting on it
+  - create a global command handler to dispatch to lower-level command handler
+  - connects the raw event source to the preprocessor
+  - connects the preprocessor to the machine
+  - connects the machine to the command handler
+  - starts the machine : the machine is now reactive to raw events and computes the 
+  associated commands
+- The preprocessor will receive raw events from two sources : the user interface and the external
+ systems (databases, etc.). From raw events, it will compute inputs for the connected state 
+ machine. Note that :
+  - the preprocessor may perform effects only on the user interface (for instance `e => e.preventDefault()`
+  - the preprocessor may have its own internal state
+- The machine receives preprocessed events from the preprocessor and computes a set of commands 
+to be executed
+- The global command handler execute the incoming commands :
+  - if the command is a render command, the global handler execute directly the command in the 
+  context of the `<Machine/>` component
+  - if the command is not a render command, the global handler dispatches the command to the 
+  preconfigured command handlers
+- All command handlers are passed the raw event source emitter, so they can send back events
+  - Render commands leads to definition of React components with event handlers. Those event 
+  handlers can pass their raw events to the machine thanks to the raw event source emitter
+  - Non-render commands leads to the execution of procedures which may be successful or fail. The
+   command handler can pass back information to the machine thanks to the raw event source emitter.
+- The event source is created with the subject factory passed as parameters. That subject must 
+have the `next, complete, error` properties defined (`Observer` interface), the properties 
+`subscribe` defined (`Observable` interface), and at least three operators (`map, filter, 
+startWith`). Rx from `Rxjs` is a natural choice, but other reactive libraries can be easily 
+adapted, including standard simple event emitters or callbacks.
+
 # Tips and gotchas
-- most of the time `intentSourceFactory` will just change the name of the event. You can 
-perfectly if that makes sense, use `intentSourceFactory : x => x` and directly pass on the raw 
+- most of the time `preprocessor` will just change the name of the event. You can 
+perfectly if that makes sense, use `preprocessor : x => x` and directly pass on the raw 
 events to the machine as input. That is fine as long as the machine never has to perform an 
 effect (this is one of the machine's contract). In our example, you will notice that we are doing
- `e.preventDefault`, so our example does not qualify for such a simplification of 
- `intentSourceFactory`. Furthermore, for documentation and design purpose, it makes sense to use 
+ `e.persist()`, so our example does not qualify for such a simplification of 
+ `preprocessor`. Furthermore, for documentation and design purpose, it makes sense to use 
  any input nomenclature which links to the domain rather than the user interface. As we have 
  seen, what is a click on a button is a search intent to the machine, and results in a search 
  command to the command executor. 
@@ -330,7 +411,7 @@ has one screen which the `GalleryApp` renders. In application with several scree
 control states corresponding to specific screens, and have the relevant render commands generated
  in `entryActions` according to the control state the machine is in.
 - the interfaced systems can communicate with the machine via a `trigger` event emitter. As such 
-any relevent raw event should be associated to an event handler obtained through `trigger`. The 
+any relevant raw event should be associated to an event handler obtained through `trigger`. The 
 `trigger` event emitter is passed as parameter by the `Machine` component to any function props 
 who may need it. For instance the `GalleryApp` component is written as follows :
 
@@ -346,6 +427,149 @@ who may need it. For instance the `GalleryApp` component is written as follows :
   }
 ```
 
-**TODO : explain controlled component / uncontrolled component!!**
-**TODO : do a code pen**
-**TODO : command the code with explanation about trigger?**
+# Further examples
+All examples can be executed on the model :
+
+```javascript
+
+const App = machine => React.createElement(Machine, {
+  entryActions: machine.entryActions,
+  preprocessor: machine.preprocessor,
+  fsmSpecs: machine,
+  commandHandlers: machine.commandHandlers,
+  settings: {},
+  componentWillUpdate : (machine.componentWillUpdate||noop)(machine.inject),
+  componentDidUpdate: (machine.componentDidUpdate||noop)(machine.inject)
+}, null);
+
+ReactDOM.render(
+  App(machines.imageGallery),
+  document.getElementById('root')
+);
+```
+
+## Controlled form
+This example is a simple form input which will trigger a render on submit. It illustrates how to 
+handle controlled components at the preprocessing level.
+
+```javascript
+
+const machines = {
+  controlledForm: {
+    preprocessor: rawEventSource => rawEventSource.map(ev => {
+      const { rawEventName, rawEventData } = destructureEvent(ev);
+
+      if (rawEventName === INPUT_CHANGED) {
+        return { [INPUT_CHANGED]: rawEventData.target.value }
+      }
+      else if (rawEventName === KEY_PRESSED) {
+        return rawEventData.key === KEY_ENTER
+          ? { [ENTER_KEY_PRESSED]: void 0 }
+          : NO_INTENT
+      }
+
+      return NO_INTENT
+    })
+      .filter(x => x !== NO_INTENT),
+    entryActions: {
+      A: (extendedState, eventData, fsmSettings) => {
+        const { value, placeHolder } = extendedState;
+
+        return renderAction(trigger => h(Input, {
+          value, placeHolder, onKeyPress: trigger(KEY_PRESSED), onChange: trigger(INPUT_CHANGED)
+        }))
+      },
+      B: (extendedState, eventData, fsmSettings) => {
+        const { value: text } = extendedState;
+
+        return renderAction(trigger => h(TextMessage, { text }, []))
+      }
+    },
+    states: { A: '', B: '' },
+    events: [BUTTON_CLICKED, INPUT_CHANGED, ENTER_KEY_PRESSED],
+    transitions: [
+      { from: INIT_STATE, event: INIT_EVENT, to: 'A', action: NO_ACTIONS },
+      {
+        from: 'A', event: INPUT_CHANGED, to: 'A', action: (extendedState, eventData, fsmSettings) => {
+          const value = eventData;
+
+          return {
+            outputs: NO_OUTPUT,
+            updates: [{ op: 'add', path: '/value', value }]
+          }
+        }
+      },
+      {
+        from: 'A', event: ENTER_KEY_PRESSED, to: 'B', action: NO_ACTIONS
+      },
+    ],
+    initialExtendedState: { placeHolder: 'Enter some text', value: '' }
+  },
+}
+```
+
+## Uncontrolled form with ref
+This example is a simple form input which will trigger a render on submit. It illustrates how to 
+handle uncontrolled components at the preprocessing level.
+
+```javascript
+export class InputWithExplicitRef extends React.Component {
+  constructor(props) {
+    super(props);
+    this.inputRef = React.createRef();
+  }
+
+  render() {
+    const Component = this;
+    const { onKeyPress, placeHolder } = Component.props;
+    const onKeyPressWithRef = ev => onKeyPress(ev, this.inputRef);
+
+    return input({ ref: this.inputRef, placeholder: placeHolder, type: "text", onKeyPress: onKeyPressWithRef }, [])
+  }
+}
+
+const machines = {
+  uncontrolledFormWithExplicitRef: {
+    preprocessor: rawEventSource => rawEventSource
+      .map(ev => {
+        const { rawEventName, rawEventData, ref } = destructureEvent(ev);
+
+        if (rawEventName === KEY_PRESSED) {
+          return rawEventData.key === KEY_ENTER
+            ? { [ENTER_KEY_PRESSED]: ref.current.value }
+            : NO_INTENT
+        }
+        return NO_INTENT
+      })
+      .filter(x => x !== NO_INTENT),
+    entryActions: {
+      A: (extendedState, eventData, fsmSettings) => {
+        const { placeHolder } = extendedState;
+
+        return renderAction(trigger => h(InputWithExplicitRef, { placeHolder, onKeyPress: trigger(KEY_PRESSED) }))
+      },
+      B: (extendedState, eventData, fsmSettings) => {
+        const { entered: text } = extendedState;
+
+        return renderAction(trigger => h(TextMessage, { text }, []))
+      }
+    },
+    states: { A: '', B: '' },
+    events: [BUTTON_CLICKED, ENTER_KEY_PRESSED],
+    transitions: [
+      { from: INIT_STATE, event: INIT_EVENT, to: 'A', action: NO_ACTIONS },
+      {
+        from: 'A', event: ENTER_KEY_PRESSED, to: 'B', action: (extendedState, eventData, fsmSettings) => {
+          const value = eventData;
+
+          return {
+            outputs: NO_OUTPUT,
+            updates: [{ op: 'add', path: '/entered', value }]
+          }
+        }
+      },
+    ],
+    initialExtendedState: { placeHolder: 'Enter some text', entered: '' }
+  }
+}
+```

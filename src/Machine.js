@@ -1,10 +1,8 @@
-import { Component } from 'react';
+import { Component } from "react";
 import { create_state_machine, decorateWithEntryActions, NO_OUTPUT } from "state-transducer";
-import { applyJSONpatch, identity } from "./helpers";
-import Rx from 'rxjs/Rx'
-import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
+import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties";
 
-// const $ = Rx.Observable;
+const identity = x => x;
 
 // Machine helpers
 // NOTE: they are declared out of the Machine component as they do not depend on the Machine
@@ -18,33 +16,33 @@ export function triggerFnFactory(rawEventSource) {
     // DOC : `ref` here is :: React.Ref and is generally used to pass `ref`s for uncontrolled component
     return function eventHandler(...args) {
       return rawEventSource.next([rawEventName].concat(args));
-    }
-  }
+    };
+  };
 }
 
-export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
+export function commandHandlerFactory(component, trigger, actionExecutorSpecs) {
   return actions => {
-    if (actions === NO_OUTPUT) {return}
+    if (actions === NO_OUTPUT) {return;}
 
     actions.forEach(action => {
-      if (action === NO_OUTPUT) {return}
+      if (action === NO_OUTPUT) {return;}
 
       const { command, params } = action;
       if (command === COMMAND_RENDER) {
         // render actions are :: trigger -> Component
         // and close over the extended state of the machine
         // ...except in the infrequent case when we want to
-        return component.setState({ render: params(trigger) })
+        return component.setState({ render: params(trigger) });
       }
 
       const execFn = actionExecutorSpecs[command];
-      if (!execFn || typeof execFn !== 'function') {
-        throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command))
+      if (!execFn || typeof execFn !== "function") {
+        throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command));
       }
       // NOTE :we choose this form to allow for currying down the road
-      return execFn(trigger, params)
-    })
-  }
+      return execFn(trigger, params);
+    });
+  };
 }
 
 /**
@@ -67,23 +65,23 @@ export class Machine extends Component {
     this.state = { render: null };
   }
 
-  // TODO : add updateState in props!!! so I can remove json patch from dependency
-  // TODO : remove also rxjs dependency, so pass it as props too = streamLibrary
   componentDidMount() {
     const machineComponent = this;
-    const { intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings } = machineComponent.props;
+    const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+    // NOTE : the preprocessor can be any library but must replicate the relevant Rx API
+    const Rx = subjectFactory;
     this.rawEventSource = new Rx.Subject();
-    // NOTE: we put settings last. this way `updateState` can be overridden in settings
+    // NOTE: we put settings last: this way `updateState` can be overridden in settings
     const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
-    const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch, ...settings });
+    const fsm = create_state_machine(fsmSpecsWithEntryActions, settings);
     const trigger = triggerFnFactory(this.rawEventSource);
-    const actionExecuter = actionExecuterFactory(machineComponent, trigger, actionExecutorSpecs);
-    const initialAction = fsm.start();
+    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers);
+    const initialCommand = fsm.start();
 
-    (intentSourceFactory || identity)(this.rawEventSource)
+    (preprocessor || identity)(this.rawEventSource)
       .map(fsm.yield)
-      .startWith(initialAction)
-      .subscribe(actionExecuter)
+      .startWith(initialCommand)
+      .subscribe(globalCommandHandler)
     ;
   }
 
@@ -91,49 +89,22 @@ export class Machine extends Component {
     this.rawEventSource.complete();
   }
 
-  componentDidUpdate(prevProps, prevState, snapshot){
+  componentDidUpdate(prevProps, prevState, snapshot) {
     // called after the render method.
     const machineComponent = this;
-    const { componentDidUpdate:cdu, settings} = machineComponent.props;
-    cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings );
+    const { componentDidUpdate: cdu, settings } = machineComponent.props;
+    cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings);
   }
 
-  componentWillUpdate(nextProps, nextState){
+  componentWillUpdate(nextProps, nextState) {
     // perform any preparations for an upcoming update
     const machineComponent = this;
-    const { componentWillUpdate:cwu, settings } = machineComponent.props;
+    const { componentWillUpdate: cwu, settings } = machineComponent.props;
     cwu.call(null, machineComponent, nextProps, nextState, settings);
   }
 
   render() {
     const machineComponent = this;
-    return machineComponent.state.render || null
+    return machineComponent.state.render || null;
   }
 }
-
-// import './App.css';
-// import logo from './logo.svg';
-// class App extends Component {
-//   render() {
-//     return (
-//       <div className="App">
-//         <header className="App-header">
-//           <img src={logo} className="App-logo" alt="logo"/>
-//           <p>
-//             Edit <code>src/App.js</code> and save to reload.
-//           </p>
-//           <a
-//             className="App-link"
-//             href="https://reactjs.org"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             Learn React
-//           </a>
-//         </header>
-//       </div>
-//     );
-//   }
-// }
-//
-// export default App;
