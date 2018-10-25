@@ -80,7 +80,7 @@ and API. In particular :
 - it should use the absolute minimum React features internally, in order to favor for instance a 
 painless port to React copycats (Preact, etc.)
 
-As a result of this design goals :
+As a result of these design goals :
 - we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
 - the component user can of course the whole extent of the API at disposal, those restrictions 
 only concern our implementation of the `<Machine /` component.
