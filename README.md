@@ -28,6 +28,9 @@ In our proposed architecture, the same scenario would become :
 
 ![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
 
+In that architecture, the application is refactored into a mediator, a preprocessor and a state 
+machine.
+
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
 and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
