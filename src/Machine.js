@@ -95,14 +95,20 @@ export class Machine extends Component {
     // called after the render method.
     const machineComponent = this;
     const { componentDidUpdate: cdu, settings } = machineComponent.props;
-    cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings);
+
+    if (cdu){
+      cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings);
+    }
   }
 
   componentWillUpdate(nextProps, nextState) {
     // perform any preparations for an upcoming update
     const machineComponent = this;
     const { componentWillUpdate: cwu, settings } = machineComponent.props;
-    cwu.call(null, machineComponent, nextProps, nextState, settings);
+
+    if (cwu){
+      cwu.call(null, machineComponent, nextProps, nextState, settings);
+    }
   }
 
   render() {
