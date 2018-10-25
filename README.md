@@ -49,12 +49,10 @@ can be written and tested once, then reused at will. This is our `<Machine />` c
 resource. That code is written and tested once, and then reused for any resource. Additionally, 
 only the command handler can perform effects on the external systems, which helps tracing and 
 debugging. 
-- the state machine is a function which **performs no effects**, and whose output depends 
-exclusively on present and past input. We will use the term *causal* functions for such 
+- the state machine is a function which **performs no effects**, and whose output exclusively depends 
+on current state, and present input[^2]. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
-exhibit the same property[^1]. In relation with state machines, it is the same to say that 
-an output depends exclusively on past and present inputs and that an output exclusively depends 
-on current state, and present input[^2]. The causality property means state machines are a breeze
+exhibit the same property[^1]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
  effectful functions).
 - only the preprocessor and mediator can perform effects on the user interface, which helps 
@@ -72,8 +70,9 @@ There are more benefits but this is not the place to go about them. Cf:
 
 {^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
-[^2]: The past inputs are precisely what makes the state of the 
-      machine.
+[^2]: In relation with state machines, it is the same to say that 
+      an output depends exclusively on past and present inputs and that an output exclusively depends 
+      on current state, and present input[^2].
       
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
@@ -84,11 +83,17 @@ and API. In particular :
 - it should be possible to use without risk of interference standard React features like `Context`
 - it should use the absolute minimum React features internally, in order to favor for instance a 
 painless port to React copycats (Preact, etc.)
+- non-React functionalities should be coupled only through interfaces, allowing to use any 
+suitable implementation
 
 As a result of these design goals :
 - we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
 - the component user can of course the whole extent of the API at disposal, those restrictions 
 only concern our implementation of the `<Machine /` component.
+- we defined interfaces for extended state updates (reducer interface), event processing 
+(observer and observable interfaces).
+- any machine can be substituted to our library provided that it implements a `.start` and `
+.yield` method, with start being sugar for `.yield({init: some data})`.
 
 # API
 ##` <Machine fsmSpecs, actionExecutorSpecs, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
