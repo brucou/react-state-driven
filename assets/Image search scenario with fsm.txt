@@ -1,0 +1,23 @@
+title Image search scenario
+
+User ->  User interface : 'c'
+User ->  User interface : 'a'
+User ->  User interface : 't'
+User ->  User interface : Search
+note right of User interface : User searches for 'cat' images
+User interface -> +Mediator : button click
+Mediator -> +Preprocessor : button click
+Preprocessor -> -Mediator : {Search : 'cat'}
+Mediator -> +FSM : {SEARCH : 'cat'}
+FSM -> -Mediator : [API call, render]
+Mediator -> +External systems : API call: https://api.flickr.com/... 
+External systems -> -Mediator :
+Mediator -> -User interface : render
+User interface ->  User : 
+note right of External systems : successful search
+External systems -> +Mediator : API response
+Mediator -> +FSM : {SEARCH_SUCCESS : {items: ...}}
+FSM -> -Mediator : [render]
+note right of User interface : Application displays cat images
+Mediator -> -User interface : render
+User interface ->  User : 
