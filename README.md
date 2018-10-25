@@ -47,8 +47,8 @@ can be written and tested once, then reused at will. This is our `<Machine />` c
 - the state machine is a function which **performs no effects**, and whose output depends 
 exclusively on present and past input. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
-exhibit the same property[^1]. In relation with state machine, it is the same to say that 
-an output depends exclusively on past and present inputs and that an output exclusively depend 
+exhibit the same property[^1]. In relation with state machines, it is the same to say that 
+an output depends exclusively on past and present inputs and that an output exclusively depends 
 on current state, and present input[^2]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
  effectful functions).
@@ -114,13 +114,15 @@ usage of our react component with our machine library, we will implement an [ima
 application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
 That application basically takes an input from the user, looks up images related
  to that search input, and displays it. The user can then click on a particular image to see it 
- in more details. The corresponding machine is here :
-
-![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
-
+ in more details. 
+ 
 For illustration, the user interface starts like this :
 
 ![image search interface](https://i.imgur.com/mDQQTX8.png?1) 
+
+ The corresponding machine is here :
+
+![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
 
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that React using our `Machine` component.
