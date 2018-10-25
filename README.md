@@ -45,6 +45,10 @@ the incidental complexity of our implementation :
 - the mediator algorithm is the same independently of the pieces it coordinates. This means it 
 can be written and tested once, then reused at will. This is our `<Machine />` component. This is
  a code you do not have to write anymore.
+- command handlers are pretty generic pieces of code. An example could be code to fetch a 
+resource. That code is written and tested once, and then reused for any resource. Additionally, 
+only the command handler can perform effects on the external systems, which helps tracing and 
+debugging. 
 - the state machine is a function which **performs no effects**, and whose output depends 
 exclusively on present and past input. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
@@ -53,10 +57,6 @@ an output depends exclusively on past and present inputs and that an output excl
 on current state, and present input[^2]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
  effectful functions).
-- Command handlers are pretty generic pieces of code. An example could be code to fetch a 
-resource. That code is written and tested once, and then reused for any resource. Additionally, 
-only the command handler can perform effects on the external systems, which helps tracing and 
-debugging. 
 - only the preprocessor and mediator can perform effects on the user interface, which helps 
 tracing and debugging. 
 
