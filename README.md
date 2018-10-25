@@ -35,7 +35,8 @@ specific concerns :
 - the state machine computes the commands to execute as a result of its present and past inputs, 
 or, what is equivalent, its present input and current state 
 - the command handler interpret and execute incoming commands
-- the mediator coordinates the preprocessor, the state machine and the command handler 
+- the mediator coordinates the user interface, the preprocessor, the state machine and the command 
+handler
 
 Apart from the separation of concerns we have achieved, we also have successfully reduced 
 the incidental complexity of our implementation :
@@ -48,14 +49,19 @@ exhibit the same property[^1]. In relation with state machine, it is the same to
 an output depends exclusively on past and present inputs and that an output exclusively depend 
 on current state, and present input[^2]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
- effectful functions - aka procedures).
-- only the preprocessor can perform effects on the user interface
+ effectful functions).
+- only the preprocessor and mediator can perform effects on the user interface
 - only the command handler can perform effects on the external systems
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
  instance, we use in our implementation `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
    [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
     if the need be, by simply building interface adapters.
+
+There are more benefits but this is not the place to go about them. Cf:
+- [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
+- [Pure UI](https://rauchg.com/2015/pure-ui)
+- [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
 
 {^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
