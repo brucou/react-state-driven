@@ -89,7 +89,7 @@ There are more benefits but this is not the place to go about them. Cf:
       on current state, and present input[^2].
 
 # Installation
-> `react` and `react-test-renderer` are peer dependencies.
+> `react`  is a peer dependency.
 
 ```sh
 npm install react-state-driven

@@ -54,7 +54,6 @@
     "json-patch-es6": "^2.0.6"
   },
   "peerDependencies": {
-    "react": ">=16.3",
-    "react-test-renderer": ">=16.3"
+    "react": ">=16.3"
   }
 }
