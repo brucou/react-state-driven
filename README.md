@@ -11,6 +11,7 @@
 - [Further examples](#further-examples)
   * [Controlled form](#controlled-form)
   * [Uncontrolled form with ref](#uncontrolled-form-with-ref)
+- [Testing](#testing)
 
 # Motivation
 User interfaces are reactive systems which can be modelized accurately by state machines. There 
@@ -109,7 +110,7 @@ suitable implementation
 
 As a result of these design goals :
 - we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
-- the component user can of course the whole extent of the API at disposal, those restrictions 
+- the component user can of course use the whole extent of the API at disposal, those restrictions 
 only concern our implementation of the `<Machine /` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
@@ -603,3 +604,10 @@ const machines = {
   }
 }
 ```
+
+# Testing
+Coming soon!
+
+# Prior art
+- [React automata](https://github.com/MicheleBertoli/react-automata)
+
