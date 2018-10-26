@@ -2,7 +2,7 @@
   "repository": "git@github.com:brucou/react-state-driven.git",
   "name": "react-state-driven",
   "author": "brucou",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "A state machine abstraction for React",
   "main": "dist/react-state-driven.js",
