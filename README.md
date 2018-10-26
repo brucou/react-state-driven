@@ -283,7 +283,7 @@ interface. The outputs from the machine are commands representing what commands/
 on the interfaced system(s). Some commands always occur when transitioning to a given control 
 state of the state machine : we gather those commands in `entryActions`. The mapping between 
 user/system events and machine input is performed by `preprocessor`. The commands output 
-by the machine are mapped to executors gathered in `commandHandlers` so our `Machine` 
+by the machine are mapped to handlers gathered in `commandHandlers` so our `Machine` 
 component knows how to run a command when it receives one. `componentWillUpdate` and 
 `componentDidUpdate` are overriding default behaviour of the eponym lifecycle hooks for the 
 `Machine` component. 
@@ -426,7 +426,7 @@ effect (this is one of the machine's contract). In our example, you will notice 
  `preprocessor`. Furthermore, for documentation and design purposes, it makes sense to use 
  any input nomenclature which links to the domain rather than the user interface. As we have 
  seen, what is a click on a button is a search intent to the machine, and results in a search 
- command to the command executor. 
+ command to the command handler. 
 - some machine inputs correspond to the aggregation of several events. For instance, if we had to
  recreate a double click for the `Search` button, we would to receive two clicks before passing a 
  `SEARCH` input to the machine. We use `Rxjs` to deal with those cases, as its combinator library
