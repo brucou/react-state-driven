@@ -4,16 +4,11 @@ import { COMMAND_RENDER, ERR_COMMAND_HANDLERS } from "./properties";
 
 const identity = x => x;
 
-// Machine helpers
-// NOTE: they are declared out of the Machine component as they do not depend on the Machine
-// They are declared here for cohesiveness purposes
-// Declaring them inside did not seem to work anyways :
-// the functions are not in scope of the constructor?
 export function triggerFnFactory(rawEventSource) {
   return rawEventName => {
     // DOC : by convention, [rawEventName, rawEventData, ref (optional), ...anything else]
     // DOC : rawEventData is generally the raw event passed by the event handler
-    // DOC : `ref` here is :: React.Ref and is generally used to pass `ref`s for uncontrolled component
+    // DOC : `ref` here is :: React.ElementRef and is generally used to pass `ref`s for uncontrolled component
     return function eventHandler(...args) {
       return rawEventSource.next([rawEventName].concat(args));
     };
@@ -29,9 +24,6 @@ export function commandHandlerFactory(component, trigger, commandHandlers) {
 
       const { command, params } = action;
       if (command === COMMAND_RENDER) {
-        // render actions are :: trigger -> Component
-        // and close over the extended state of the machine
-        // ...except in the infrequent case when we want to
         return component.setState({ render: params(trigger) });
       }
 
@@ -39,7 +31,7 @@ export function commandHandlerFactory(component, trigger, commandHandlers) {
       if (!execFn || typeof execFn !== "function") {
         throw new Error(ERR_COMMAND_HANDLERS(command));
       }
-      // NOTE :we choose this form to allow for currying down the road
+
       return execFn(trigger, params);
     });
   };
@@ -70,10 +62,9 @@ export class Machine extends Component {
     const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
     assertPropsContract(machineComponent.props);
 
-    // NOTE : the preprocessor can be any library but must replicate the relevant Rx API
+    // NOTE : the subjectFactory can be any library but must replicate the relevant Rx API
     const Rx = subjectFactory;
     this.rawEventSource = new Rx.Subject();
-    // NOTE: we put settings last: this way `updateState` can be overridden in settings
     const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
     const fsm = create_state_machine(fsmSpecsWithEntryActions, settings);
     const trigger = triggerFnFactory(this.rawEventSource);

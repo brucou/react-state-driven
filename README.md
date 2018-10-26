@@ -73,7 +73,14 @@ There are more benefits but this is not the place to go about them. Cf:
 [^2]: In relation with state machines, it is the same to say that 
       an output depends exclusively on past and present inputs and that an output exclusively depends 
       on current state, and present input[^2].
-      
+
+# Installation
+> `react` and `react-test-renderer` are peer dependencies.
+
+```sh
+npm install react-state-driven
+```
+
 # API design goals
 We want to have an integration which is generic enough to accomodate a large set of use cases, 
 and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
