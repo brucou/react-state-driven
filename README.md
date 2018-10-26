@@ -454,7 +454,9 @@ who may need it. For instance the `GalleryApp` component is written as follows :
 ```
 
 # Further examples
-All examples can be executed on the model :
+All demo from examples can be found in the [demo repository](https://github.com/brucou/react-app-simple) 
+
+Examples can be booted up as follows :
 
 ```javascript
 
