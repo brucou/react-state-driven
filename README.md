@@ -1,9 +1,23 @@
+- [Motivation](#motivation)
+- [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
+- [Installation](#installation)
+- [API design goals](#api-design-goals)
+- [API](#api)
+    + [Description](#description)
+    + [Example](#example)
+    + [Types](#types)
+    + [Semantics](#semantics)
+- [Tips and gotchas](#tips-and-gotchas)
+- [Further examples](#further-examples)
+  * [Controlled form](#controlled-form)
+  * [Uncontrolled form with ref](#uncontrolled-form-with-ref)
+
 # Motivation
 User interfaces are reactive systems which can be modelized accurately by state machines. There 
 is a number of state machine libraries in the field with varying design objectives. We have proposed
- an extended state machine library with a minimal API, architected around a single causal function, 
- which does not produce effects. This particular design requires integration with the interfaced 
- system, in order to produce the necessary effects (user events, system events, user actions). We
+ an extended state machine library with a minimal API, architected around a single causal, 
+ effect-less function. This particular design requires integration with the interfaced 
+ systems, in order to produce the necessary effects (user events, system events, user actions). We
   present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
 
 This document is structured as follows :
@@ -11,7 +25,8 @@ This document is structured as follows :
 - we quickly present the rationale behind modelling user interfaces with state machines and the 
 resulting architecture
 - we continue with our API design goals
-- we finally explain and document the actual API together with a not-so-trivial example of use
+- we finally explain and document the actual API together with a not-so-trivial example of use, 
+taken from other similar libraries
 
 # Modelling user interfaces with state machines
 We are going all along to refer to a image search application example to illustrate our 
@@ -22,9 +37,8 @@ In a traditional architecture, a simple scenario would be expressed as follows :
 ![image search basic scenario](assets/Image%20search%20scenario.png)
 
 What we can derive from that is that the application is interfacing with other systems : the user
- interface and what we call external systems. The application responsibility is to translate user
-  actions on the user interface into commands on the external systems, execute those commands and 
-  deal with their result.
+ interface and what we call external systems (local storage, databases, etc.). The application 
+ responsibility is to translate user actions on the user interface into commands on the external systems, execute those commands and deal with their result.
 
 In our proposed architecture, the same scenario would become :
 
@@ -44,7 +58,7 @@ Apart from the separation of concerns we have achieved, we also have successfull
 the incidental complexity of our implementation :
 - the mediator algorithm is the same independently of the pieces it coordinates. This means it 
 can be written and tested once, then reused at will. This is our `<Machine />` component. This is
- a code you do not have to write anymore.
+ glue code that you do not have to write anymore.
 - command handlers are pretty generic pieces of code. An example could be code to fetch a 
 resource. That code is written and tested once, and then reused for any resource. Additionally, 
 only the command handler can perform effects on the external systems, which helps tracing and 
