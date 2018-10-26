@@ -51,7 +51,7 @@ specific concerns :
 - the preprocessor translates user interface events into inputs for the state machine
 - the state machine computes the commands to execute as a result of its present and past inputs, 
 or, what is equivalent, its present input and current state 
-- the command handler interpret and execute incoming commands
+- the command handler interprets and executes incoming commands
 - the mediator coordinates the user interface, the preprocessor, the state machine and the command 
 handler
 
