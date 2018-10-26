@@ -17,10 +17,10 @@ export default {
     { file: pkg.module, format: 'es' },
   ],
 
-  // external: makeExternalPredicate([
-  //   ...Object.keys(pkg.dependencies || {}),
-  //   ...Object.keys(pkg.peerDependencies || {}),
-  // ]),
+  external: makeExternalPredicate([
+    ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.peerDependencies || {}),
+  ]),
 
   plugins: [babel({ plugins: ['external-helpers'] })],
 }

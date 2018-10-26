@@ -610,4 +610,4 @@ Coming soon!
 
 # Prior art
 - [React automata](https://github.com/MicheleBertoli/react-automata)
-
+- [react-xstate-js](https://github.com/bradwoods/react-xstate-js)
