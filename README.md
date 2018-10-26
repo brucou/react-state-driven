@@ -113,8 +113,10 @@ As a result of these design goals :
 only concern our implementation of the `<Machine /` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
-- any machine can be substituted to our library provided that it implements a `.start` and `
-.yield` method, with start being sugar for `.yield({init: some data})`.
+- any state machine implementation can be substituted to our library provided that :
+  - it implements a `.start` and `.yield` methods, with `start` being sugar for `.yield({init: some
+   data})`.
+  - it produces no effects
 
 # API
 ##` <Machine fsmSpecs, commandHandlers, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
