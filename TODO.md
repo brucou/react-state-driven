@@ -1,5 +1,4 @@
 cf. TODOs in README
-transfer machine code here
-use rollup from react-automata
-maybe add it to https://github.com/GantMan/ReactStateMuseum
+update README with simplification of props
+maybe add it to https://github.com/GantMan/ReactStateMuseum : marketing
 debugging support... 

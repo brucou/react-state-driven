@@ -40,12 +40,9 @@ export function commandHandlerFactory(component, trigger, commandHandlers) {
 /**
  * Class implementing a reactive system modelled by a state machine (fsm).
  * The system behaviour is determined by properties passed at construction time :
- * - `intentSourceFactory` : translate user events and system events into machine events
- * - `fsmSpecs` : configuration of the fsm
- * - `settings` : optional settings to be passed to the fsm. This allow for parameterization of the
- * behaviour of the machine
- * - `entryActions` : action factories that are executed on entry of control states of the fsm
- * - `actionExecutorSpecs` : maps commands output by the fsm to the function executing those commands
+ * - `preprocessor` : translate user events and system events into machine events
+ * - `fsm` : uninitialized fsm
+ * - `commandHandlers` : maps commands output by the fsm to the function executing those commands
  * - componentWillUpdate : a function for customizing `componentWillUpdate` for a class instance. That function
  * however has a different signature, and incorporates the fsm's settings as parameters
  * - componentDidUpdate : a function for customizing `componentDidUpdate` for a class instance. That function
@@ -59,14 +56,12 @@ export class Machine extends Component {
 
   componentDidMount() {
     const machineComponent = this;
-    const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+    const { subjectFactory, fsm, commandHandlers, preprocessor } = machineComponent.props;
     assertPropsContract(machineComponent.props);
 
     // NOTE : the subjectFactory can be any library but must replicate the relevant Rx API
     const Rx = subjectFactory;
     this.rawEventSource = new Rx.Subject();
-    const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
-    const fsm = create_state_machine(fsmSpecsWithEntryActions, settings);
     const trigger = triggerFnFactory(this.rawEventSource);
     const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers);
     const initialCommand = fsm.start();
@@ -85,20 +80,20 @@ export class Machine extends Component {
   componentDidUpdate(prevProps, prevState, snapshot) {
     // called after the render method.
     const machineComponent = this;
-    const { componentDidUpdate: cdu, settings } = machineComponent.props;
+    const { componentDidUpdate: cdu } = machineComponent.props;
 
     if (cdu){
-      cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings);
+      cdu.call(null, machineComponent, prevProps, prevState, snapshot);
     }
   }
 
   componentWillUpdate(nextProps, nextState) {
     // perform any preparations for an upcoming update
     const machineComponent = this;
-    const { componentWillUpdate: cwu, settings } = machineComponent.props;
+    const { componentWillUpdate: cwu } = machineComponent.props;
 
     if (cwu){
-      cwu.call(null, machineComponent, nextProps, nextState, settings);
+      cwu.call(null, machineComponent, nextProps, nextState);
     }
   }
 
@@ -109,7 +104,8 @@ export class Machine extends Component {
 }
 
 function assertPropsContract(props){
-  const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = props;
-  if (!subjectFactory) throw `<Machine/> : subjectFactory props has a falsy value!`
-  if (!fsmSpecs) throw `<Machine/> : fsmSpecs props has a falsy value! Should be specifications for the state machine!`
+  const { subjectFactory, fsm, commandHandlers, preprocessor } = props;
+  if (!subjectFactory) throw `<Machine/> : subjectFactory prop has a falsy value!`
+  if (!fsm) throw `<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`
+  if (!fsm.yield) throw `<Machine/> : fsm prop must have a yield property!`
 }
