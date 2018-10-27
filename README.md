@@ -286,8 +286,8 @@ function of the input received by the machine and the control state the machine 
 - The machine transitions automatically from the initial state to the `start` control state.
   - on doing so, it issues one command : render `GalleryApp`. Render commands have a default 
   handler which renders the `React.Element` passed as parameter. That element can be computed 
-  from the extended state of the state machine and the event data. An event emitter is passed to 
-  allow for the element to send events to the state machine : 
+  from the extended state of the state machine and the event data. An event emitter (here `trigger`)
+   is passed to allow for the element to send events to the state machine : 
 ```javascript
   export function renderAction(params) {
     return { outputs: { command: COMMAND_RENDER, params }, updates: NO_STATE_UPDATE }
