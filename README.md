@@ -120,15 +120,14 @@ only concern our implementation of the `<Machine /` component.
   - it produces no effects
 
 # API
-##` <Machine fsmSpecs, commandHandlers, entryActions, preprocessor, settings, subjectFactory, componentDidUpdate, componentWillUpdate />`
+##` <Machine fsm, commandHandlers, preprocessor, subjectFactory, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
-props reflect : the specifications of the underlying machine, pre-processing of interfaced 
+props reflect : the underlying machine, pre-processing of interfaced 
 system's raw events, functions executing machine commands and performing effects on the 
-interfaced systems. They also include settings for machine parameterization (in particular 
-defining how to update extended state), and  `componentDidUpdate` and `componentWillUpdate` props
+interfaced systems. They also include `componentDidUpdate` and `componentWillUpdate` props
  to integrate with the relevant React API. 
 Our `Machine` component expects some props but does not expect children components. 
 
@@ -253,20 +252,33 @@ export const machines = {
   }
 };
 
-const App = machine => React.createElement(Machine, {
-  entryActions: machine.entryActions,
-  preprocessor: machine.preprocessor,
-  fsmSpecs: machine,
-  commandHandlers: machine.commandHandlers,
-  settings: {},
-  componentWillUpdate : (machine.componentWillUpdate||noop)(machine.inject),
-  componentDidUpdate: (machine.componentDidUpdate||noop)(machine.inject)
-}, null);
+const showMachine = machine => {
+  const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
+  const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
 
+  return React.createElement(Machine, {
+    subjectFactory: Rx,
+    preprocessor: machine.preprocessor,
+    fsm: fsm,
+    commandHandlers: machine.commandHandlers,
+    componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
+    componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
+  }, null)
+};
+
+// Displays all machines (not very beautifully, but this is just for testing)
 ReactDOM.render(
-  App(machines.imageGallery),
+  div(
+    Object.keys(machines).map(machine => {
+      return div([
+        span(machine),
+        showMachine(machines[machine])
+      ])
+    })
+  ),
   document.getElementById('root')
 );
+
 ```
  
 Now let's explain a bit what is going on here. 
@@ -280,13 +292,11 @@ could just as well use jsx `<Machine ... />`, that really is but an implementati
 Our state machine is basically a function which takes an input and returns outputs. The inputs 
 received by the machine are meant to be mapped to events triggered by the user through the user 
 interface. The outputs from the machine are commands representing what commands/effects to perform 
-on the interfaced system(s). Some commands always occur when transitioning to a given control 
-state of the state machine : we gather those commands in `entryActions`. The mapping between 
-user/system events and machine input is performed by `preprocessor`. The commands output 
-by the machine are mapped to handlers gathered in `commandHandlers` so our `Machine` 
-component knows how to run a command when it receives one. `componentWillUpdate` and 
-`componentDidUpdate` are overriding default behaviour of the eponym lifecycle hooks for the 
-`Machine` component. 
+on the interfaced system(s). The mapping between user/system events and machine input is 
+performed by `preprocessor`. The commands output  by the machine are mapped to handlers gathered 
+in `commandHandlers` so our `Machine`  component knows how to run a command when it receives one.
+ `componentWillUpdate` and `componentDidUpdate` are overriding default behaviour of the eponym 
+ lifecycle hooks for the `Machine` component. 
 
 A run of the machine would then be like this :
 - The machine will encapsulate the following properties as part of its extended state : `query`, 
@@ -314,7 +324,7 @@ input `{SEARCH_SUCCESS: items}`.
    a render `GalleryApp` command. This displays the list of fetched items on the screen.
 - Any further event will lead to the same sequence : 
   - the user or an interfaced system (network, etc.) triggers an event X,
-  - that event will be transformed into a machine input (as per `intentSourceFactory`), 
+  - that event will be transformed into a machine input (as per `preprocessor`), 
   - the machine will, as per its specs, update its extended state and issue command(s) 
   - Issued command will be executed by the `Machine` component, as per `commandHandlers`
 
@@ -345,12 +355,8 @@ We only reproduce here the key types :
 /**
  * @typedef {Object} MachineProps
  * @property {EventPreprocessor} [preprocessor = x=>x]
- * @property {FSM_Def} fsmSpecs machine definition (typically events, states and transitions)
- * @property {{updateState : ExtendedStateReducer, ...}} settings Settings which will be passed to the state machine which
- * allows to customize its behaviour. At the minimum, it should include a state reducer by which the machine updates
- * its extended state.
+ * @property {FSM} fsm machine definition (typically events, states and transitions)
  * @property {Object.<CommandName, CommandHandler>} commandHandlers
- * @property {Object.<ControlState, ActionFactory>} entryActions
  * @property {{Subject : SubjectFactory}} subjectFactory Subject factory. A subject is an entity which is both an
  * observer and an observable, i.e. it can both receive and emit data. A typical value for this parameter could be
  * Rx (from Rxjs).
@@ -385,7 +391,6 @@ We only reproduce here the key types :
 
 ### Semantics
 - The `<Machine />` component :
-  - initializes the state machine whose definition is passed as parameter
   - initializes the raw event source (subject) which which receives and forward all raw events 
   (user  events and  system events), and the event emitter emitting on it
   - create a global command handler to dispatch to lower-level command handler
@@ -458,26 +463,6 @@ who may need it. For instance the `GalleryApp` component is written as follows :
 
 # Further examples
 All demo from examples can be found in the [demo repository](https://github.com/brucou/react-app-simple) 
-
-Examples can be booted up as follows :
-
-```javascript
-
-const App = machine => React.createElement(Machine, {
-  entryActions: machine.entryActions,
-  preprocessor: machine.preprocessor,
-  fsmSpecs: machine,
-  commandHandlers: machine.commandHandlers,
-  settings: {},
-  componentWillUpdate : (machine.componentWillUpdate||noop)(machine.inject),
-  componentDidUpdate: (machine.componentDidUpdate||noop)(machine.inject)
-}, null);
-
-ReactDOM.render(
-  App(machines.imageGallery),
-  document.getElementById('root')
-);
-```
 
 ## Controlled form
 This example is a simple form input which will trigger a render on submit. It illustrates how to 
