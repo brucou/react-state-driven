@@ -215,28 +215,6 @@ export const machines = {
         return NO_INTENT
       })
       .filter(x => x !== NO_INTENT),
-    entryActions: {
-      loading: (extendedState, eventData, fsmSettings) => {
-        const { items, photo } = extendedState;
-        const query = eventData;
-        const searchCommand = {
-          command: COMMAND_SEARCH,
-          params: query
-        };
-        const renderGalleryAction = renderAction(trigger =>
-          h(GalleryApp, { query, items, trigger, photo, gallery: 'loading' }, [])
-        );
-
-        return {
-          outputs: [searchCommand, renderGalleryAction.outputs],
-          updates: NO_STATE_UPDATE
-        }
-      },
-      photo: renderGalleryApp('photo'),
-      gallery: renderGalleryApp('gallery'),
-      error: renderGalleryApp('error'),
-      start: renderGalleryApp('start'),
-    },
     commandHandlers: {
       [COMMAND_SEARCH]: (trigger, query) => {
         helpers.runSearchQuery(query)
@@ -306,8 +284,21 @@ A run of the machine would then be like this :
 function of the input received by the machine and the control state the machine is in.  
 - The initial extended state is `{ query: '', items: [], photo: undefined }`
 - The machine transitions automatically from the initial state to the `start` control state.
-  - on doing so, it issues one command : render `GalleryApp` passing it in props the relevant 
-  data extracted from the extended state of the state machine. 
+  - on doing so, it issues one command : render `GalleryApp`. Render commands have a default 
+  handler which renders the `React.Element` passed as parameter. That element can be computed 
+  from the extended state of the state machine and the event data : 
+```javascript
+  export function renderAction(params) {
+    return { outputs: { command: COMMAND_RENDER, params }, updates: NO_STATE_UPDATE }
+  }
+  export function renderGalleryApp(galleryState) {
+    return (extendedState, eventData, fsmSettings) => {
+      const { query, items, photo } = extendedState;
+  
+      return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: galleryState }, []));
+    }
+  }
+```
 - The `Machine` component executes the render command and renders a gallery app with an
    empty query text input, no images(`items`), and no selected image (`photo`).
 - The user enters some text in the text input
