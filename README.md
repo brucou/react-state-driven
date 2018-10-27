@@ -118,6 +118,8 @@ only concern our implementation of the `<Machine /` component.
   - it implements a `.start` and `.yield` methods, with `start` being sugar for `.yield({init: some
    data})`.
   - it produces no effects
+  - it returns an array of commands (implementation relying on callback or event hooks cannot be 
+  integrated)
 
 # API
 ##` <Machine fsm, commandHandlers, preprocessor, subjectFactory, componentDidUpdate, componentWillUpdate />`
