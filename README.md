@@ -427,17 +427,14 @@ effect (this is one of the machine's contract). In our example, you will notice 
  seen, what is a click on a button is a search intent to the machine, and results in a search 
  command to the command handler. 
 - some machine inputs correspond to the aggregation of several events. For instance, if we had to
- recreate a double click for the `Search` button, we would to receive two clicks before passing a 
+ recreate a double click for the `Search` button, we would have to receive two clicks before 
+ passing a 
  `SEARCH` input to the machine. We use `Rxjs` to deal with those cases, as its combinator library
   (`map`, `filter`, `takeUntil` etc.) allow to aggregate events in a fairly simple manner. Note 
   that we could implement this logic in the state machine itself (our machines are 
   turing-machine-equivalent, they can implement any effect-less computation), but : 1. it is much 
   better to keep the machine dealing with inputs at a higher level of abstraction, 2. that kind 
   of event aggregation is **much easier** done with a dedicated library such as `rxjs` 
-- In our example, we render always the same component. This is because our image search app only 
-has one screen which the `GalleryApp` renders. In application with several screens, we could use 
-control states corresponding to specific screens, and have the relevant render commands generated
- in `entryActions` according to the control state the machine is in.
 - the interfaced systems can communicate with the machine via a `trigger` event emitter. As such 
 any relevant raw event should be associated to an event handler obtained through `trigger`. The 
 `trigger` event emitter is passed as parameter by the `Machine` component to any function props 
