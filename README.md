@@ -150,7 +150,7 @@ For illustration, the user interface starts like this :
 ![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
 
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
-that React using our `Machine` component.
+that with React using our `Machine` component.
 
 ```javascript
 export class GalleryApp extends React.Component {
