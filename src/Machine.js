@@ -66,6 +66,12 @@ export class Machine extends Component {
     const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers);
     const initialCommand = fsm.start();
 
+    // TODO : pass the subject, not Rx! So I can use replay subject or behaviour subject if I want
+    // TODO : then have a behaviour subject for react-state-driven, so I start automatically the machine
+    // TODO : for xstate, one can kick the event source, by modifying preprocessor with startWith
+    // TODO : remove the start
+    // TODO : this.rawE...rce.startsWith(initEvent)
+    // TODO : all that after it works
     (preprocessor || identity)(this.rawEventSource)
       .map(fsm.yield)
       .startWith(initialCommand)
