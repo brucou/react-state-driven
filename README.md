@@ -383,6 +383,11 @@ We only reproduce here the key types :
  */
 ```
 
+### Contracts
+- types contracts
+- the chosen machine instance must accept a predefined init event. That event will be sent when 
+the `<Machine/>` component is first mounted (`componentDidMount` React lifecycle method). 
+
 ### Semantics
 - The `<Machine />` component :
   - initializes the raw event source (subject) which which receives and forward all raw events 
@@ -415,6 +420,8 @@ have the `next, complete, error` properties defined (`Observer` interface), the 
 `subscribe` defined (`Observable` interface), and at least three operators (`map, filter, 
 startWith`). Rx from `Rxjs` is a natural choice, but other reactive libraries can be easily 
 adapted, including standard simple event emitters or callbacks.
+- The event source is terminated when the `<Machine/>` component is removed from the screen 
+(`componentWillUnmount` lifecycle method)
 
 # Tips and gotchas
 - most of the time `preprocessor` will just change the name of the event. You can 
@@ -463,6 +470,7 @@ All demos from examples can be found in the [demo repository](https://github.com
 # Testing
 Coming soon!
 
-# Prior art
+# Prior art and useful references
+- [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
 - [React automata](https://github.com/MicheleBertoli/react-automata)
 - [react-xstate-js](https://github.com/bradwoods/react-xstate-js)
