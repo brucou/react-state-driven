@@ -48,28 +48,19 @@ export function commandHandlerFactory(component, trigger, commandHandlers, setti
     const actionsHandlersArray = registeredCommands.map(command => {
       const commandHandler = commandHandlersWithRenderHandler[command];
       const commandParams$ = nonEmptyActions$
-        .filter(action => {
-          return action.command === command
-        })
-        .do(action => console.log(`action for command`, action, command))
+        .filter(action => action.command === command)
       ;
 
       if (isHandlerObsOperator(commandHandler)) {
-        return commandHandler(commandParams$)
-          .do(returnedValue => {
-            debugger
-          })
+        return commandHandler(commandParams$);
       }
       else {
         return commandParams$
-          .map(({ trigger, params }) => commandHandler(trigger, params))
-          .do(returnedValue => {
-            debugger
-          })
+          .map(({ trigger, params }) => commandHandler(trigger, params));
       }
     });
 
-    return merge(...actionsHandlersArray)
+    return merge(...actionsHandlersArray);
   };
 }
 
@@ -105,9 +96,7 @@ export class Machine extends Component {
         .map(fsm.yield)
     );
     // TODO : error management
-    executedCommands$.subscribe((x) => {
-      console.log(x);
-    })
+    executedCommands$.subscribe(() => { })
     ;
   }
 
