@@ -392,6 +392,9 @@ adapted, including standard simple event emitters or callbacks.
 (`componentWillUnmount` lifecycle method)
 
 # Tips and gotchas
+- If the configured state machine library has an initial event, it can be passed using a behavior
+ subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
+ handle that initial event. Cf. examples
 - The distinction between command handler types is made on the number of arguments passed to the 
 command handler.
 - most of the time `preprocessor` will just change the name of the event. You can 
