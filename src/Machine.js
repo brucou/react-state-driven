@@ -1,6 +1,6 @@
 import { Component } from "react";
-import { create_state_machine, decorateWithEntryActions, NO_OUTPUT } from "state-transducer";
-import { COMMAND_RENDER, ERR_COMMAND_HANDLERS } from "./properties";
+import { NO_OUTPUT } from "state-transducer";
+import { COMMAND_RENDER } from "./properties";
 
 const identity = x => x;
 
@@ -15,25 +15,61 @@ export function triggerFnFactory(rawEventSource) {
   };
 }
 
-export function commandHandlerFactory(component, trigger, commandHandlers) {
-  return actions => {
-    if (actions === NO_OUTPUT) {return;}
+function isHandlerObsOperator(handler) {
+  if (!handler || (typeof handler !== "function") || (handler.length !== 1 && handler.length !== 2))
+    throw new Error(`isHandlerObsOperator : command handler has unexpected shape! Should a be a function with 1 or 2 arguments!`);
 
-    actions.forEach(action => {
-      if (action === NO_OUTPUT) {return;}
+  return handler.length === 1;
+}
 
-      const { command, params } = action;
-      if (command === COMMAND_RENDER) {
-        return component.setState({ render: params(trigger) });
+export function commandHandlerFactory(component, trigger, commandHandlers, settings) {
+  const { merge, create } = settings;
+
+  return function globalCommandHandler(actions$) {
+    // Remove edge cases for actions (no outputs from the machine)
+    const nonEmptyActions$ = actions$
+      .filter(actions => actions !== NO_OUTPUT)
+      .map(actions => actions.filter(action => action !== NO_OUTPUT))
+      // NOTE : trick to flatten the array of actions into the stream
+      // while still keeping order of execution of actions
+      .flatMap(actions => create(o => {
+        actions.forEach(action => o.next({ ...action, trigger }));
+        o.complete();
+      }))
+      .shareReplay(1);
+    // Compute the handlers for each command configured
+    const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
+      [COMMAND_RENDER]: function renderHandler(trigger, params) {
+        component.setState({ render: params(trigger) });
       }
-
-      const execFn = commandHandlers[command];
-      if (!execFn || typeof execFn !== "function") {
-        throw new Error(ERR_COMMAND_HANDLERS(command));
-      }
-
-      return execFn(trigger, params);
     });
+
+    const registeredCommands = Object.keys(commandHandlersWithRenderHandler);
+    const actionsHandlersArray = registeredCommands.map(command => {
+      const commandHandler = commandHandlersWithRenderHandler[command];
+      const commandParams$ = nonEmptyActions$
+        .filter(action => {
+          return action.command === command
+        })
+        .do(action => console.log(`action for command`, action, command))
+      ;
+
+      if (isHandlerObsOperator(commandHandler)) {
+        return commandHandler(commandParams$)
+          .do(returnedValue => {
+            debugger
+          })
+      }
+      else {
+        return commandParams$
+          .map(({ trigger, params }) => commandHandler(trigger, params))
+          .do(returnedValue => {
+            debugger
+          })
+      }
+    });
+
+    return merge(...actionsHandlersArray)
   };
 }
 
@@ -56,26 +92,22 @@ export class Machine extends Component {
 
   componentDidMount() {
     const machineComponent = this;
-    const { subjectFactory, fsm, commandHandlers, preprocessor } = machineComponent.props;
     assertPropsContract(machineComponent.props);
+    const { eventHandler, fsm, commandHandlers, preprocessor } = machineComponent.props;
+    const { subjectFactory, create, merge } = eventHandler;
 
-    // NOTE : the subjectFactory can be any library but must replicate the relevant Rx API
-    const Rx = subjectFactory;
-    this.rawEventSource = new Rx.Subject();
+    this.rawEventSource = subjectFactory();
     const trigger = triggerFnFactory(this.rawEventSource);
-    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers);
-    const initialCommand = fsm.start();
+    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, { create, merge });
 
-    // TODO : pass the subject, not Rx! So I can use replay subject or behaviour subject if I want
-    // TODO : then have a behaviour subject for react-state-driven, so I start automatically the machine
-    // TODO : for xstate, one can kick the event source, by modifying preprocessor with startWith
-    // TODO : remove the start
-    // TODO : this.rawE...rce.startsWith(initEvent)
-    // TODO : all that after it works
-    (preprocessor || identity)(this.rawEventSource)
-      .map(fsm.yield)
-      .startWith(initialCommand)
-      .subscribe(globalCommandHandler)
+    const executedCommands$ = globalCommandHandler(
+      (preprocessor || identity)(this.rawEventSource)
+        .map(fsm.yield)
+    );
+    // TODO : error management
+    executedCommands$.subscribe((x) => {
+      console.log(x);
+    })
     ;
   }
 
@@ -88,7 +120,7 @@ export class Machine extends Component {
     const machineComponent = this;
     const { componentDidUpdate: cdu } = machineComponent.props;
 
-    if (cdu){
+    if (cdu) {
       cdu.call(null, machineComponent, prevProps, prevState, snapshot);
     }
   }
@@ -98,7 +130,7 @@ export class Machine extends Component {
     const machineComponent = this;
     const { componentWillUpdate: cwu } = machineComponent.props;
 
-    if (cwu){
+    if (cwu) {
       cwu.call(null, machineComponent, nextProps, nextState);
     }
   }
@@ -109,9 +141,13 @@ export class Machine extends Component {
   }
 }
 
-function assertPropsContract(props){
-  const { subjectFactory, fsm, commandHandlers, preprocessor } = props;
-  if (!subjectFactory) throw `<Machine/> : subjectFactory prop has a falsy value!`
-  if (!fsm) throw `<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`
-  if (!fsm.yield) throw `<Machine/> : fsm prop must have a yield property!`
+function assertPropsContract(props) {
+  const { eventHandler, fsm, commandHandlers, preprocessor } = props;
+  if (!eventHandler) throw new Error(`<Machine/> : eventHandler prop has a falsy value!`);
+  const { subjectFactory, create, merge } = eventHandler;
+  if (!subjectFactory) throw new Error(`<Machine/> : subjectFactory prop has a falsy value!`);
+  if (!create) throw new Error(`<Machine/> : create prop has a falsy value!`);
+  if (!merge) throw new Error(`<Machine/> : merge prop has a falsy value!`);
+  if (!fsm) throw new Error(`<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`);
+  if (!fsm.yield) throw new Error(`<Machine/> : fsm prop must have a yield property!`);
 }

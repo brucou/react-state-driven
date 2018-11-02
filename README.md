@@ -216,14 +216,17 @@ export const machines = {
       })
       .filter(x => x !== NO_INTENT),
     commandHandlers: {
-      [COMMAND_SEARCH]: (trigger, query) => {
-        helpers.runSearchQuery(query)
-          .then(data => {
-            trigger('SEARCH_SUCCESS')(data.items)
-          })
-          .catch(error => {
-            trigger('SEARCH_FAILURE')(void 0)
-          });
+      [COMMAND_SEARCH]: obs => {
+         return obs.switchMap(({trigger, params}) => {
+           const query = params;
+           return runSearchQuery(query)
+             .then(data => {
+               trigger('SEARCH_SUCCESS')(data.items)
+             })
+             .catch(error => {
+               trigger('SEARCH_FAILURE')(void 0)
+             });
+         })
       }
     },
     inject: new Flipping(),
@@ -322,6 +325,11 @@ input `{SEARCH_SUCCESS: items}`.
   - the machine will, as per its specs, update its extended state and issue command(s) 
   - Issued command will be executed by the `Machine` component, as per `commandHandlers`
 
+Note that we are using `switchMap` from our event processing library to handle for us the 
+concurrency issues related to outdated requests (i.e. cancelled requests whose 
+response nevertheless arrive). We could handle that in the state machine but we
+ do it here, as it otherwise complicates needlessly the machine.
+
 Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
 (`flipping.flip()`). 
@@ -332,58 +340,18 @@ will always be as described.
 ### Types
 Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
 
-We only reproduce here the key types :
-
-```javascript
-// Commands
-/**
- * @typedef {RenderCommand | SystemCommand} Command
- */
-/**
- * @typedef {{command : COMMAND_RENDER, params : (function (trigger:RawEventDispatcher):React.Component)  }} RenderCommand
- */
-/**
- * @typedef {{command : CommandName, params : * }} SystemCommand
- */
-// Mediator
-/**
- * @typedef {Object} MachineProps
- * @property {EventPreprocessor} [preprocessor = x=>x]
- * @property {FSM} fsm machine definition (typically events, states and transitions)
- * @property {Object.<CommandName, CommandHandler>} commandHandlers
- * @property {{Subject : SubjectFactory}} subjectFactory Subject factory. A subject is an entity which is both an
- * observer and an observable, i.e. it can both receive and emit data. A typical value for this parameter could be
- * Rx (from Rxjs).
- * The factory is called with `new`. The returned object must have all methods in `Combinators`
- */
-/**
- * @typedef {function (RawEventSource) : MachineEventSource} EventPreprocessor
- */
-/**
- * @typedef {function():Subject} SubjectFactory
- */
-/**
- * @typedef {function(RawEventDispatcher, params : *): *} CommandHandler
- */
-/**
- * @typedef {function(RawEventName):RawEventCallback} RawEventDispatcher
- */
-/**
- * @typedef {function(RawEventData, React.ElementRef, ...):*} RawEventCallback
- */
-/**
- * @typedef {function(Observable, ...):Observable} EventCombinator
- */
-/**
- * @type {{map: EventCombinator, filter:EventCombinator, startWith:EventCombinator}} Combinators
- */
-// FSM
-/**
- * @typedef {function(ExtendedState, ExtendedStateUpdate): ExtendedState} ExtendedStateReducer
- */
-```
+Let's just say here that adapting an event processing library is the most complicated to 
+interface. This is already done for Rxjs and you can just import the adapter and use it. 
+Concretely, the interface involves:
+- `create`, `merge` functions, which respectively create and merge observables
+-  `subjectFactory` which creates a subject, which implements the observable and observer interface 
+- has the following operators available on the prototype : `filter`, `map`, `flatMap`, `shareReplay`
+- emission of observables can only be started on `subscribe` (i.e. interfacing an event library 
+like `xstream` is not advised)
 
 ### Contracts
+- the `[COMMAND_RENDER]` command is reserved and must not be used in the command handlers' 
+specifications  
 - types contracts
 - the chosen machine instance must accept a predefined init event. That event will be sent when 
 the `<Machine/>` component is first mounted (`componentDidMount` React lifecycle method). 
@@ -424,6 +392,8 @@ adapted, including standard simple event emitters or callbacks.
 (`componentWillUnmount` lifecycle method)
 
 # Tips and gotchas
+- The distinction between command handler types is made on the number of arguments passed to the 
+command handler.
 - most of the time `preprocessor` will just change the name of the event. You can 
 perfectly if that makes sense, use `preprocessor : x => x` and directly pass on the raw 
 events to the machine as input. That is fine as long as the machine never has to perform an 
@@ -442,6 +412,9 @@ effect (this is one of the machine's contract). In our example, you will notice 
   turing-machine-equivalent, they can implement any effect-less computation), but : 1. it is much 
   better to keep the machine dealing with inputs at a higher level of abstraction, 2. that kind 
   of event aggregation is **much easier** done with a dedicated library such as `rxjs` 
+- Likewise, do not hesitate when possible to handle concurrency issues with the event processing 
+library. In our example, we used `switchMap` which only emits the response from the latest 
+request. Doing this in the machine, while possible, would needlessly complicates the design
 - the interfaced systems can communicate with the machine via a `trigger` event emitter. As such 
 any relevant raw event should be associated to an event handler obtained through `trigger`. The 
 `trigger` event emitter is passed as parameter by the `Machine` component to any function props 
