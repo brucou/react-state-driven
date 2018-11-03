@@ -330,7 +330,8 @@ concurrency issues related to outdated requests (i.e. cancelled requests whose
 response nevertheless arrive). We could handle that in the state machine but we
  do it here, as it otherwise complicates needlessly the machine.
 
-Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
+Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`]
+(https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
 (`flipping.flip()`). 
 
@@ -353,8 +354,8 @@ like `xstream` is not advised)
 - the `[COMMAND_RENDER]` command is reserved and must not be used in the command handlers' 
 specifications  
 - types contracts
-- the chosen machine instance must accept a predefined init event. That event will be sent when 
-the `<Machine/>` component is first mounted (`componentDidMount` React lifecycle method). 
+- the chosen machine instance must accept a predefined init event (`INIT_EVENT`). That event will be 
+sent when the `<Machine/>` component is first mounted (`componentDidMount` React lifecycle method). 
 
 ### Semantics
 - The `<Machine />` component :
@@ -382,12 +383,18 @@ to be executed
   - Render commands leads to definition of React components with event handlers. Those event 
   handlers can pass their raw events to the machine thanks to the raw event source emitter
   - Non-render commands leads to the execution of procedures which may be successful or fail. The
-   command handler can pass back information to the machine thanks to the raw event source emitter.
+   command handler can pass back information to the machine thanks to the raw event source 
+   emitter. There are two ways to specify a non-render command :
+     - through a regular procedure taking two parameters (the raw event emitter and the command 
+     params)
+     - through a function receiving the stream of commands that it handles, as in our example. 
+     Note that this function will only receive in that stream the commands it handles, i.e. a 
+     `SEARCH` handler will receive a stream of `SEARCH` commands.
 - The event source is created with the subject factory passed as parameters. That subject must 
 have the `next, complete, error` properties defined (`Observer` interface), the properties 
-`subscribe` defined (`Observable` interface), and at least three operators (`map, filter, 
-startWith`). Rx from `Rxjs` is a natural choice, but other reactive libraries can be easily 
-adapted, including standard simple event emitters or callbacks.
+`subscribe` defined (`Observable` interface), and at least five operators (`map`, `filter`, `flatMap`, 
+`startWith`, `shareReplay`). Rx from `Rxjs` is a natural choice, but other reactive libraries can be 
+easily adapted, including standard simple event emitters or callbacks.
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
@@ -417,7 +424,8 @@ effect (this is one of the machine's contract). In our example, you will notice 
   of event aggregation is **much easier** done with a dedicated library such as `rxjs` 
 - Likewise, do not hesitate when possible to handle concurrency issues with the event processing 
 library. In our example, we used `switchMap` which only emits the response from the latest 
-request. Doing this in the machine, while possible, would needlessly complicates the design
+request. Doing this in the machine, while possible, would needlessly complicate the design, and 
+lower the level of abstraction at which the machine operates
 - the interfaced systems can communicate with the machine via a `trigger` event emitter. As such 
 any relevant raw event should be associated to an event handler obtained through `trigger`. The 
 `trigger` event emitter is passed as parameter by the `Machine` component to any function props 

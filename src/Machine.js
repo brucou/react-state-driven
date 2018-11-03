@@ -36,6 +36,7 @@ export function commandHandlerFactory(component, trigger, commandHandlers, setti
         actions.forEach(action => o.next({ ...action, trigger }));
         o.complete();
       }))
+      // NOTE : I have no idea why a replay here, it should be enough with share() but whatever
       .shareReplay(1);
     // Compute the handlers for each command configured
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
