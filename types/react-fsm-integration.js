@@ -34,6 +34,10 @@
  * `complete`) and observable (`subscribe`) interface.
  * @property {function(Producer): Observable} create Creates an observable from a producer function
  * @property {function(...): Observable} merge Returns an observable which merges the observables passed as parameter
+ * @property {function(...):Pipeable} map same definition as the eponym operator from rxjs v6
+ * @property {function(...):Pipeable} filter same definition as the eponym operator from rxjs v6
+ * @property {function(...):Pipeable} flatMap same definition as the eponym operator from rxjs v6
+ * @property {function(...):Pipeable} shareReplay same definition as the eponym operator from rxjs v6
  */
 /**
  * @typedef {function(Observer) :()} Producer A producer produces and sends value to an observer

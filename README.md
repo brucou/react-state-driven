@@ -348,7 +348,8 @@ interface. This is already done for Rxjs and you can just import the adapter and
 Concretely, the interface involves:
 - `create`, `merge` functions, which respectively create and merge observables
 -  `subjectFactory` which creates a subject, which implements the observable and observer interface 
-- has the following operators available on the prototype : `filter`, `map`, `flatMap`, `shareReplay`
+- has the following operators available : `filter`, `map`, `flatMap`, `shareReplay`, which can be
+ used by means of a `pipe` method on the observable prototype
 - emission of observables can only be started on `subscribe` (i.e. interfacing an event library 
 like `xstream` is not advised)
 
