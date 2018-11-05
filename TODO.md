@@ -1,5 +1,6 @@
 cf. TODOs in README
 // TODO : test actions are run in order...
+- move to rxjs 6, i.e. functions pipe, map, filter etc out of prototype... 
 
 - could change the interface of command handler to be a combinator
   - {SEARCH : Observable<{trigger,params}> -> Observable<*>}

@@ -149,6 +149,8 @@ For illustration, the user interface starts like this :
 
 ![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
 
+The live example [can be accessed on stackblitz](https://stackblitz.com/edit/react-x5onxx?file=index.js).
+
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.
 
@@ -452,7 +454,75 @@ All demos from examples can be found in the [demo repository](https://github.com
 
 
 # Testing
-Coming soon!
+Testing a `<Machine/>` instance in that architecture is simplified. The `<Machine/>` mediator 
+acts as a monadic glue, with which the event handler, preprocessor, fsm, and command handler are 
+composed in a pipeline : `event -> event handler -> preprocessor -> state machine -> command 
+handler`. As such, provided that `Machine/>` and the browser come already tested, we can test 
+every part of the pipeline separately. Each of these parts being smaller and tackling a single  
+concern is easier to test.
+
+## Event 
+This involves testing that an event occurring through the system is correctly passed on to the 
+event handler. For instance, clicking on a `Submit` button will indeed propagate a click event to 
+the event handler.
+
+Remember a previous code snippet : 
+
+```javascript
+      h(Form, { galleryState, onSubmit: trigger('onSubmit'), onClick: trigger('onCancelClick') }, []),
+```
+
+Submitting the form should trigger an `onSubmit` event to the preprocessor. This looks simple 
+enough to write correctly but it could still happen that we `trigger(onSubmitt)` mistakenly. 
+
+## Event handler
+This involves testing that events are correctly passed to the preprocessor. There is no need to 
+test that as the `trigger` event handler comes already tested out of the box.
+
+## Preprocessor
+This involves testing that raw events are correctly transformed in machine inputs.
+
+Remember a previous code snippet : 
+
+```javascript
+        else if (rawEventName === 'onSubmit') {
+          e.persist();
+          e.preventDefault();
+          return { type: 'SEARCH', data: ref.current.value }
+        }
+```
+
+Errors could also creep in the form of misreading the raw event parameters (say `ref.value` 
+instead of `ref.current.value`).
+ 
+## State machine
+We here have to test an input-output mapping, as the machine is a simple function which does not 
+perform any effects. The [state-transducer](https://github.com/brucou/state-transducer) library comes with a test generator out of the box.
+ Those tests can be enhanced by what we know about the machine at hand : If the machine has some 
+ invariants, it is possible to do property-based testing. 
+
+## Command handler
+The command handler is supposed to perform effects related to the interfaced system. It can be 
+tested by mocking the interfaced systems.
+
+## Maintainability
+TODO : we should test again specs. What we do with testing every pipe in pipeline is not that. 
+Explain that the state machine however is the specifications without the effects. So the brittle 
+part is the rest. A change in specs should trigger a change in tests. A change in implementation 
+should not. What are the changes in impl? event names, command monikers, changes in the syntax of
+ the machine, etc.
+ Another alternative is to test the component!! i.e. simulate input sequence, and mock/spy effects 
+ (including render). So here what we would do is use the test generator to generate input 
+ sequence and then test the machine. Then take a few of those tests, and turn them into actual 
+ spyed on simulation. 
+ What we recommend is a mixed strategy. Test the machine extensively. Then test the component in 
+ DOM context lightly (say with all-transition coverage). Because if the machine is correct, then a 
+ mistake in the second phase will be due to the other modules, i.e. event processing and command handling. The vast majority of 
+ the complexity is in the machine, so once that is covered, we can move to testing thing in 
+ integration (real DOM). That way the tests can be less brittle. A change in implementation but 
+ not in specs will not change the tests for the machine. 
+ 
+etc.
 
 # Prior art and useful references
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
