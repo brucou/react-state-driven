@@ -22,22 +22,23 @@ function isHandlerObsOperator(handler) {
   return handler.length === 1;
 }
 
-export function commandHandlerFactory(component, trigger, commandHandlers, settings) {
-  const { merge, create } = settings;
+export function commandHandlerFactory(component, trigger, commandHandlers, eventHandler) {
+  const { create, merge, filter, map, flatMap, shareReplay } = eventHandler;
 
   return function globalCommandHandler(actions$) {
     // Remove edge cases for actions (no outputs from the machine)
-    const nonEmptyActions$ = actions$
-      .filter(actions => actions !== NO_OUTPUT)
-      .map(actions => actions.filter(action => action !== NO_OUTPUT))
+    const nonEmptyActions$ = actions$.pipe(
+      filter(actions => actions !== NO_OUTPUT),
+      map(actions => actions.filter(action => action !== NO_OUTPUT)),
       // NOTE : trick to flatten the array of actions into the stream
       // while still keeping order of execution of actions
-      .flatMap(actions => create(o => {
+      flatMap(actions => create(o => {
         actions.forEach(action => o.next({ ...action, trigger }));
         o.complete();
-      }))
+      })),
       // NOTE : I have no idea why a replay here, it should be enough with share() but whatever
-      .shareReplay(1);
+      shareReplay(1)
+    )
     // Compute the handlers for each command configured
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(trigger, params) {
@@ -48,16 +49,17 @@ export function commandHandlerFactory(component, trigger, commandHandlers, setti
     const registeredCommands = Object.keys(commandHandlersWithRenderHandler);
     const actionsHandlersArray = registeredCommands.map(command => {
       const commandHandler = commandHandlersWithRenderHandler[command];
-      const commandParams$ = nonEmptyActions$
-        .filter(action => action.command === command)
-      ;
+      const commandParams$ = nonEmptyActions$.pipe(
+        filter(action => action.command === command)
+      );
 
       if (isHandlerObsOperator(commandHandler)) {
         return commandHandler(commandParams$);
       }
       else {
-        return commandParams$
-          .map(({ trigger, params }) => commandHandler(trigger, params));
+        return commandParams$.pipe(
+          map(({ trigger, params }) => commandHandler(trigger, params))
+        );
       }
     });
 
@@ -86,16 +88,14 @@ export class Machine extends Component {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
     const { eventHandler, fsm, commandHandlers, preprocessor } = machineComponent.props;
-    const { subjectFactory, create, merge } = eventHandler;
+    const { subjectFactory, create, merge, filter, map, flatMap, shareReplay } = eventHandler;
 
     this.rawEventSource = subjectFactory();
     const trigger = triggerFnFactory(this.rawEventSource);
-    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, { create, merge });
+    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, eventHandler);
+    const preprocessedEventSource = (preprocessor || identity)(this.rawEventSource);
 
-    const executedCommands$ = globalCommandHandler(
-      (preprocessor || identity)(this.rawEventSource)
-        .map(fsm.yield)
-    );
+    const executedCommands$ = globalCommandHandler(preprocessedEventSource.pipe(map(fsm.yield)));
     // TODO : error management
     executedCommands$.subscribe(() => { })
     ;
