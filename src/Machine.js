@@ -26,7 +26,6 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
   const { create, merge, filter, map, flatMap, shareReplay } = eventHandler;
 
   return function globalCommandHandler(actions$) {
-    // Remove edge cases for actions (no outputs from the machine)
     const nonEmptyActions$ = actions$.pipe(
       filter(actions => actions !== NO_OUTPUT),
       map(actions => actions.filter(action => action !== NO_OUTPUT)),
@@ -38,7 +37,8 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
       })),
       // NOTE : I have no idea why a replay here, it should be enough with share() but whatever
       shareReplay(1)
-    )
+    );
+
     // Compute the handlers for each command configured
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(trigger, params) {

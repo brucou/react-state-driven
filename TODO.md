@@ -1,19 +1,6 @@
-cf. TODOs in README
 // TODO : test actions are run in order...
-- move to rxjs 6, i.e. functions pipe, map, filter etc out of prototype... 
 
 - could change the interface of command handler to be a combinator
-  - {SEARCH : Observable<{trigger,params}> -> Observable<*>}
-  - obs => obs.flatMapLatest({trigger, params} => runSearchQuery(query).then(...).catch(...))
-  - could also be a function obs({trigger, command, params}) => obs(*)
-    - that would allow to combine different command in case they are not independent, but it is 
-    probably better to keep commands independent. If they are not independent this means state 
-    handled at the obs level, and more boilerplate at the obs level... better keep them 
-    independent or allow both syntaxes
-    - both syntaxes : command handler is either Observable -> Observable, or Object.<Command, Observable -> Observable> 
-    - this uses the potential of event processing libraries at the same time, it avoids doing 
-    lower-level stuff in the state machine so it can stay at a higher level of abstraction
-    - that said this means this is stuff that goes undocumented in the state machine...
     - HOW TO TEST?? I have to test the preprocessor, the state machine, and the handler
       - should write a tester for observable, and try to have independent of the library and with
        marbles. That implies the observable output must be deterministic!!
