@@ -6,12 +6,17 @@
     + [Description](#description)
     + [Example](#example)
     + [Types](#types)
+    + [Contracts](#contracts)
     + [Semantics](#semantics)
 - [Tips and gotchas](#tips-and-gotchas)
 - [Further examples](#further-examples)
-  * [Controlled form](#controlled-form)
-  * [Uncontrolled form with ref](#uncontrolled-form-with-ref)
 - [Testing](#testing)
+  * [Testing the state machine](#testing-the-state-machine)
+  * [Testing the component](#testing-the-component)
+  * [Example](#example-1)
+    + [Testing the machine](#testing-the-machine)
+    + [Testing the component](#testing-the-component-1)
+- [Prior art and useful references](#prior-art-and-useful-references)
 
 # Motivation
 User interfaces are reactive systems which can be modelized accurately by state machines. There 
