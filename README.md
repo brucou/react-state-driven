@@ -472,8 +472,11 @@ component, finds errors along the way, but at the same time resists well to chan
 implementation.
 
 To that purpose, our recommended approach is to use a mixed (gray-box testing) approach, which :
-- black-box test extensively the state machine
-- black-box test thoroughly the component
+- black-box tests extensively the state machine
+- black-box tests thoroughly the component
+
+That way, a change in implementation with constant semantics, should lead to only minimal changes 
+in the tests.
 
 ## Testing the state machine
 The state machine encodes the behaviour of the component. It results from this that a change in 
