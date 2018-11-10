@@ -1,10 +1,5 @@
 // TODO : test actions are run in order...
-
-- could change the interface of command handler to be a combinator
-    - HOW TO TEST?? I have to test the preprocessor, the state machine, and the handler
-      - should write a tester for observable, and try to have independent of the library and with
-       marbles. That implies the observable output must be deterministic!!
-        - if several concurrent queries should use forkJoin for instance 
+- explain testing
 - explain the resulting architecture
   - communicate outputs by callback : similar to onClick for instance
   - how to receive inputs?? pass an event source as parameter!!
