@@ -785,6 +785,9 @@ To enable comparison between actual and expected output, we have to massage some
  the data. For instance, objects containing functions cannot be directly compared, so we 
  preprocess the result to make them comparable.
 
+#### Results
+We generated 27 tests which all pass (eventually).
+
 ### Testing the component
 TODO : the image search gallery
 
