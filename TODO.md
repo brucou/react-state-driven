@@ -1,4 +1,5 @@
 // TODO : test actions are run in order...
+- look at that plan-oriented-testing (recoup with the improvement in the testing generation)
 - explain testing
 - explain the resulting architecture
   - communicate outputs by callback : similar to onClick for instance
