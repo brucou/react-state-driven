@@ -1,4 +1,8 @@
-// TODO : test actions are run in order...
+// TODO : test actions are run in order..
+- analyze or doc. event handlers ALWAys async rendering, sync otherwise...
+  - https://www.bennadel.com/blog/2893-setstate-state-mutation-operation-may-be-synchronous-in-reactjs.htm
+- maybe use https://github.com/sunesimonsen/react-dom-testing ? instead of kent dodds? mmm NO, no
+ wait, waitFor
 - look at that plan-oriented-testing (recoup with the improvement in the testing generation)
 - explain testing
 - explain the resulting architecture

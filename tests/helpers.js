@@ -1,15 +1,15 @@
-import { mapOverObj } from "fp-rosetree"
+import { mapOverObj } from "fp-rosetree";
 import { applyPatch } from "json-patch-es6";
-import { CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE, NO_STATE_UPDATE, NO_OUTPUT, INIT_EVENT  } from "state-transducer";
-import React from 'react';
-import fetchJsonp from "fetch-jsonp"
-import produce, { nothing } from "immer"
+import { CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE, INIT_EVENT, NO_OUTPUT, NO_STATE_UPDATE } from "state-transducer";
+import React from "react";
+import prettyFormat from "pretty-format";
+import fetchJsonp from "fetch-jsonp";
+import produce, { nothing } from "immer";
 import h from "react-hyperscript";
-import hyperscript from "hyperscript-helpers";
 import { filter, flatMap, map, shareReplay } from "rxjs/operators";
-import { Observable, merge, Subject, BehaviorSubject, from, of, range } from 'rxjs';
+import { BehaviorSubject, merge, Observable } from "rxjs";
+import { GalleryApp } from "./fixtures/components";
 
-const { div, button, span, input, form, section, img, h1 } = hyperscript(h);
 
 export const noop = () => {};
 export const stateTransducerRxAdapter = {
@@ -25,112 +25,9 @@ export const stateTransducerRxAdapter = {
 };
 
 export const ERR_COMMAND_HANDLERS = command => (`Cannot find valid executor for command ${command}`)
-export const BUTTON_CLICKED = 'button_clicked';
-export const KEY_PRESSED = 'key_pressed';
-export const INPUT_KEY_PRESSED = 'input_key_pressed';
-export const ENTER_KEY_PRESSED = 'enter_key_pressed';
-export const INPUT_CHANGED = 'input_changed';
 export const NO_ACTIONS = () => ({ outputs: NO_OUTPUT, updates: NO_STATE_UPDATE });
-export const KEY_ENTER = `Enter`;
 export const NO_INTENT = null;
-export const COMMAND_SEARCH = 'command_search';
-export const COMMAND_RENDER = 'render';
-
-export class Form extends React.Component {
-  constructor(props) {
-    super(props);
-    this.formRef = React.createRef();
-  }
-
-  render() {
-    const Component = this;
-    const { galleryState, onSubmit, onClick } = Component.props;
-
-    const searchText = {
-      loading: 'Searching...',
-      error: 'Try search again',
-      start: 'Search'
-    }[galleryState] || 'Search';
-    const isLoading = galleryState === 'loading';
-
-    return (
-      form(".ui-form", { onSubmit: ev => onSubmit(ev, this.formRef) }, [
-        input(".ui-input", {
-          ref: this.formRef,
-          type: "search",
-          placeholder: "Search Flickr for photos...",
-          disabled: isLoading,
-        }),
-        div(".ui-buttons", [
-          button(".ui-button", { disabled: isLoading, 'data-flip-key': "search" }, searchText),
-          isLoading && button(".ui-button", {
-            type: "button",
-            onClick: onClick
-          }, 'Cancel')
-        ])
-      ])
-    )
-  }
-}
-
-export class Gallery extends React.Component {
-  constructor(props) {
-    super(props);
-  }
-
-  render() {
-    const { galleryState, items, onClick } = this.props;
-    const isError = galleryState === 'error';
-
-    return (
-      section(".ui-items", { 'data-state': galleryState }, [
-        isError
-          ? span(".ui-error", `Uh oh, search failed.`)
-          : items.map((item, i) => img(".ui-item", {
-            src: item.media.m,
-            style: { '--i': i },
-            key: item.link,
-            onClick: ev => onClick(item)
-          }))
-      ])
-    );
-  }
-}
-
-export class Photo extends React.Component {
-  constructor(props) {
-    super(props);
-  }
-
-  render() {
-    // NOTE: by machine construction, `photo` exists and is not null
-    const { galleryState, onClick, photo } = this.props;
-
-    if (galleryState !== 'photo') return null;
-
-    return (
-      section(".ui-photo-detail", { onClick }, [
-        img(".ui-photo", { src: photo.media.m })
-      ])
-    )
-  }
-}
-
-export class GalleryApp extends React.Component {
-  constructor(props) {
-    super(props);
-  }
-
-  render() {
-    const { query, photo, items, trigger, gallery: galleryState } = this.props;
-
-    return div(".ui-app", { 'data-state': galleryState }, [
-      h(Form, { galleryState, onSubmit: trigger('onSubmit'), onClick: trigger('onCancelClick') }, []),
-      h(Gallery, { galleryState, items, onClick: trigger('onGalleryClick') }, []),
-      h(Photo, { galleryState, photo, onClick: trigger('onPhotoClick') }, [])
-    ])
-  }
-}
+export const COMMAND_RENDER = "render";
 
 function isFunction(obj) {
   return typeof obj === 'function'
@@ -299,4 +196,22 @@ export function constGen(input, generatorState){
   return function constGen(extS, genS){
     return { hasGeneratedInput:true,       input,        generatorState      }
   }
+}
+
+const {DOMElement, DOMCollection} = prettyFormat.plugins;
+
+export function prettyDOM(htmlElement, maxLength, options) {
+  if (htmlElement.documentElement) {
+    htmlElement = htmlElement.documentElement
+  }
+
+  const debugContent = prettyFormat(htmlElement, {
+    plugins: [DOMElement, DOMCollection],
+    printFunctionName: false,
+    // highlight: true,
+    ...options,
+  });
+  return maxLength !== undefined && htmlElement.outerHTML.length > maxLength
+    ? `${debugContent.slice(0, maxLength)}...`
+    : debugContent
 }
