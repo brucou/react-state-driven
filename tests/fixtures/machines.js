@@ -106,8 +106,9 @@ export const imageGallerySwitchMap = {
     error: renderGalleryApp('error'),
     start: renderGalleryApp('start'),
   },
+  effectHandlers: {runSearchQuery},
   commandHandlers: {
-    [COMMAND_SEARCH]: obs => {
+    [COMMAND_SEARCH]: (obs, {runSearchQuery}) => {
       return obs.pipe(switchMap(({ trigger, params }) => {
         const query = params;
         return runSearchQuery(query)
@@ -122,6 +123,53 @@ export const imageGallerySwitchMap = {
   },
   inject: new Flipping(),
   componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
-  componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
+  componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();},
+  mocks: {
+    runSearchQuery : function mockedSearchQuery(query){
+      // NOTE : this is coupled to the input event in `test-generation.js`. Those values are later a part of the
+      // API call response
+      if (query === 'cathether'){
+        return Promise.resolve({items : [
+          {
+            link: "https://www.flickr.com/photos/155010203@N06/31741086078/",
+            media: { m: "https://farm2.staticflickr.com/1928/31741086078_8757b4913d_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/159915559@N02/30547921577/",
+            media: { m: "https://farm2.staticflickr.com/1978/30547921577_f8cbee76f1_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/155010203@N06/44160499005/",
+            media: { m: "https://farm2.staticflickr.com/1939/44160499005_7c34c4326d_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/139230693@N02/28991566557/",
+            media: { m: "https://farm2.staticflickr.com/1833/42224900930_360debd33e_m.jpg" }
+          }
+        ]})
+      }
+      else if (query === 'cat'){
+        return Promise.resolve({items : [
+          {
+            link: "https://www.flickr.com/photos/155010203@N06/31741086079/",
+            media: { m: "https://farm5.staticflickr.com/4818/45983626382_b3b758282f_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/159915559@N02/30547921579/",
+            media: { m: "https://farm5.staticflickr.com/4842/31094302557_25a9fcbe3d_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/155010203@N06/44160499009/",
+            media: { m: "https://farm5.staticflickr.com/4818/31094358517_55544cfcc6_m.jpg" }
+          },
+          {
+            link: "https://www.flickr.com/photos/139230693@N02/28991566559/",
+            media: { m: "https://farm5.staticflickr.com/4808/45121437725_3d5c8249d7_m.jpg" }
+          }
+        ]})
+      }
+      else return Promise.reject(new Error(`no mock defined for the query ${query}`))
+    }
+  },
 };
 

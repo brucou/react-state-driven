@@ -1,7 +1,7 @@
 import React from "react";
 import h from "react-hyperscript";
 import hyperscript from "hyperscript-helpers";
-import { SEARCH,CANCEL_SEARCH, PHOTO, PHOTO_DETAIL } from "./test-ids";
+import { SEARCH, CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH_INPUT } from "./test-ids";
 
 const { div, button, span, input, form, section, img, h1 } = hyperscript(h);
 
@@ -28,7 +28,8 @@ export class Form extends React.Component {
           ref: this.formRef,
           type: "search",
           placeholder: "Search Flickr for photos...",
-          disabled: isLoading
+          disabled: isLoading,
+          "data-testid": SEARCH_INPUT
         }),
         div(".ui-buttons", [
           button(".ui-button", { disabled: isLoading, "data-flip-key": "search" }, searchText),

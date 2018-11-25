@@ -22,7 +22,7 @@ function isHandlerObsOperator(handler) {
   return handler.length === 1;
 }
 
-export function commandHandlerFactory(component, trigger, commandHandlers, eventHandler) {
+export function commandHandlerFactory(component, trigger, commandHandlers, eventHandler, effectHandlers) {
   const { create, merge, filter, map, flatMap, shareReplay } = eventHandler;
 
   return function globalCommandHandler(actions$) {
@@ -53,13 +53,13 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
         filter(action => action.command === command)
       );
 
-      if (isHandlerObsOperator(commandHandler)) {
-        return commandHandler(commandParams$);
-      }
-      else {
+      if (command === COMMAND_RENDER) {
         return commandParams$.pipe(
           map(({ trigger, params }) => commandHandler(trigger, params))
         );
+      }
+      else {
+        return commandHandler(commandParams$, effectHandlers);
       }
     });
 
@@ -87,12 +87,12 @@ export class Machine extends Component {
   componentDidMount() {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
-    const { eventHandler, fsm, commandHandlers, preprocessor } = machineComponent.props;
+    const { eventHandler, fsm, commandHandlers, preprocessor, effectHandlers } = machineComponent.props;
     const { subjectFactory, create, merge, filter, map, flatMap, shareReplay } = eventHandler;
 
     this.rawEventSource = subjectFactory();
     const trigger = triggerFnFactory(this.rawEventSource);
-    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, eventHandler);
+    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, eventHandler, effectHandlers);
     const preprocessedEventSource = (preprocessor || identity)(this.rawEventSource);
 
     const executedCommands$ = globalCommandHandler(preprocessedEventSource.pipe(map(fsm.yield)));
