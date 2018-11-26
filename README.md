@@ -154,7 +154,7 @@ For illustration, the user interface starts like this :
 
 ![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
 
-The live example [can be accessed on stackblitz](https://stackblitz.com/edit/react-x5onxx?file=index.js).
+The live example [can be accessed here](https://frontarm.com/demoboard/?id=61be6ab3-9542-4eac-a30c-a6b4fa6ffbfa).
 
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.

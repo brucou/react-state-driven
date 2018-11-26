@@ -4,7 +4,7 @@ import {
 } from "react-testing-library";
 import { create_state_machine, decorateWithEntryActions, INIT_EVENT, NO_OUTPUT } from "state-transducer";
 import { COMMAND_RENDER, Machine } from "../src";
-import { applyJSONpatch, noop, normalizeHTML, stateTransducerRxAdapter } from "./helpers";
+import { applyJSONpatch, checkOutputs, mock, noop, normalizeHTML, stateTransducerRxAdapter } from "./helpers";
 import { testCases } from "./assets/test-generation";
 import prettyFormat from "pretty-format";
 import { imageGallerySwitchMap } from "./fixtures/machines";
@@ -35,31 +35,16 @@ let testCase;
 
 // ["nok", "start", "loading", "gallery", "loading", "gallery"]
 testCase = testCases[0];
-const assertions = {
-  // {[INIT_EVENT]: ..} -> [null, { command: "render" }],
-  // TODO : refactor in testFramework (assert, rtl); testCase (component, eventData->handlers), anchor
+
+// Test config
+const when = {
   [INIT_EVENT]: (testHarness, testCase, component, anchor) => {
-    const eventName = INIT_EVENT;
     const { assert, rtl } = testHarness;
-    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
 
-    const { baseElement, container, rerender, asFragment } = render(component, { container: anchor });
-    forEachOutput(expectedOutput, output => {
-      const { command, params } = output;
-      if (command === COMMAND_RENDER) {
-        const actualOutput = normalizeHTML(anchor.innerHTML);
-        const expectedOutput = normalizeHTML(params);
-        assert.deepEqual(actualOutput, expectedOutput, `ok with : ${prettyFormat({ [eventName]: eventData })}`);
-      }
-      else {
-        throw `assertions > [INIT_EVENT] > forEachOutput :: unexpected command for this scenario : ${command}`;
-      }
-    });
+    render(component, { container: anchor });
   },
-  // { SEARCH: "cathether" } --> [null, { command: "command_search", params: "cathether" }, { command: "render" }],
-  "SEARCH": (testHarness, testCase, component, anchor) => {
-    const eventName = SEARCH;
+  SEARCH: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
     const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
@@ -67,58 +52,40 @@ const assertions = {
 
     fireEvent.change(getByTestId(container, SEARCH_INPUT), { target: { value: query } });
     fireEvent.submit(getByTestId(container, SEARCH));
-    forEachOutput(expectedOutput, output => {
-      const { command, params } = output;
-      if (command === COMMAND_RENDER) {
-        const expectedOutput = normalizeHTML(params);
-        const actualOutput = normalizeHTML(anchor.innerHTML);
-        assert.deepEqual(actualOutput, expectedOutput, `command ${command} : ${prettyFormat({ [eventName]: eventData })}`);
-      }
-      else if (command === COMMAND_SEARCH) {
-        assert.ok(mockedEffectHandlers.runSearchQuery.calledWithExactly(query), `Query (${query}) made`);
-      }
-      else {
-        throw `assertions > [SEARCH] > forEachOutput :: unexpected command for this scenario : ${command}`;
-      }
-    });
-    // NOTE: the timing here is paramount. We have to execute our asserts in the same tick than the click. This
-    // ensures that the screen is not updated yet (React.setState is asynchronous).
   },
-  // { SEARCH_SUCESS: [{link, m}] -->       [null, { command: "render" }],
-  "SEARCH_SUCCESS": (testHarness, testCase, component, anchor) => {
-    const eventName = "SEARCH_SUCCESS";
+  SEARCH_SUCCESS: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
-    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+
     // NOTE: System events are sent by mocked effect handlers (here the API call). On receiving the search response, the
     // rendering happens asynchronously, so we need to wait a little to get the updated DOM. It is also possible
     // that the DOM is not updated (because the new DOM is exactly as the old DOM...). The less error-prone way is
-    // to just wait a tick (that should be enough for React to render) and to read the DOM then. It is also possible
-    // to wait `n` ticks, as no events will be received during those `n` ticks to be sure that React had the time to
-    // update the DOM.
+    // to just wait `n > 1` tick (that should be enough for React to render) and to read the DOM then. No events
+    // will be received during those `n` ticks to be sure that React had the time to update the DOM.
     // Those time-dependencies are tricky in theory. However, in practice most of the time, heuristics like the one
     // we just described suffice.
-    return waitForElement(() => true)
-      .then(() => {
-          forEachOutput(expectedOutput, output => {
-            const { command, params } = output;
-            if (command === COMMAND_RENDER) {
-              const expectedOutput = normalizeHTML(params);
-              const actualOutput = normalizeHTML(anchor.innerHTML);
-              assert.deepEqual(actualOutput, expectedOutput, `command ${command} : ${prettyFormat({ [eventName]: eventData })}`);
-            }
-            else {
-              throw `assertions > [SEARCH_SUCCESS] > forEachOutput :: unexpected command for this scenario : ${command}`;
-            }
-          });
-        }
-      );
-    // .catch()
+    // Note that because we anyways chain assertions with promises, we naturally wait a tick between assertions, so
+    // we could have done away with the `waitForElement`. For clarity purposes, we however let it be visible.
+    return waitForElement(() => true);
+  }
+};
+const then = {
+  [COMMAND_RENDER]: (testHarness, testCase, component, anchor, output) => {
+    const { command, params } = output;
+    const { assert, rtl } = testHarness;
+    const { eventName, eventData, mockedEffectHandlers } = testCase;
+
+    const actualOutput = normalizeHTML(anchor.innerHTML);
+    const expectedOutput = normalizeHTML(params);
+    assert.deepEqual(actualOutput, expectedOutput, `Correct render when : ${prettyFormat({ [eventName]: eventData })}`);
   },
-  "SEARCH_FAILURE": void 0,
-  "CANCEL_SEARCH": void 0,
-  "SELECT_PHOTO": void 0,
-  "EXIT_PHOTO": void 0
+  [COMMAND_SEARCH]: (testHarness, testCase, component, anchor, output) => {
+    const { assert, rtl } = testHarness;
+    const { eventName, eventData, mockedEffectHandlers } = testCase;
+    const query = eventData;
+
+    assert.ok(mockedEffectHandlers.runSearchQuery.calledWithExactly(query), `Search query '${query}' made when : ${prettyFormat({ [eventName]: eventData })}`);
+  }
 };
 const mocks = {
   imageGallerySwitchMap: {
@@ -127,16 +94,6 @@ const mocks = {
     }
   }
 };
-
-/** effectHandlers OUT */
-function mock(effectHandlers, mocks, id) {
-  const clonedHandlers = Object.assign({}, effectHandlers);
-  const mock = mocks[id];
-  const effects = Object.keys(clonedHandlers);
-  effects.forEach(effect => mock[effect](effectHandlers));
-
-  return effectHandlers;
-}
 
 QUnit.test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(assert) {
   const rtl = { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText };
@@ -165,25 +122,29 @@ QUnit.test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(a
   inputSequence.reduce((acc, input, index) => {
     const eventName = Object.keys(input)[0];
     const eventData = input[eventName];
-    const assertion = assertions[eventName];
     const testHarness = { assert, rtl };
-    const testCase = { eventData, expectedOutput: expectedOutputSequence[index], mockedEffectHandlers };
+    const testCase = { eventName, eventData, expectedOutput: expectedOutputSequence[index], mockedEffectHandlers, when, then, mocks };
 
     return acc
-      .then(() => assertion && assertion(testHarness, testCase, imageGallery, container))
+      .then(() => {
+        const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
+
+        if (simulateInput instanceof Promise) {
+          return simulateInput
+            .then(() => checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]));
+        }
+        else {
+          checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]);
+        }
+      })
       .then(done);
   }, Promise.resolve());
 
-  // TODO :
-  // helprs : mock
-  // structure : mocks, assertions : could be broken in {emit, wait, assert} to think about it
-  // the vry important thing is that it be independent of th tes case
   // TODO : error management...
-  // TODO : test case description : incorrect for now
   // TODO : case when the event name is not in the assertion config.
   // TODO : refactor this is hard to follow right now
-  // TODO : refactor in mock, mocks etc. whatever the common structure, {emit, wait, assert}?
   // TODO : do not forget after each and before cleaning : https://sinonjs.org/releases/v7.1.1/general-setup/
   // TODO : solve the problem of INIT EVENT not appearing in the input list...
+  // TODO : DOC
 });
 

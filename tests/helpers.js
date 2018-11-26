@@ -11,6 +11,7 @@ import { BehaviorSubject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./fixtures/components";
 import HTML from "html-parse-stringify";
 import { assoc, forEachObjIndexed, keys, mergeAll, mergeLeft, omit, trim } from "ramda";
+import { forEachOutput } from "./image_gallery.specs";
 
 const { parse, stringify } = HTML;
 
@@ -266,4 +267,31 @@ export function normalizeHTML(str) {
 
   const result = mapOverTree(lenses, mapFn, strTree);
   return stringify(result.children)
+}
+
+// Test framework helpers
+
+/** effectHandlers OUT */
+export function mock(effectHandlers, mocks, id) {
+  const clonedHandlers = Object.assign({}, effectHandlers);
+  const mock = mocks[id];
+  const effects = Object.keys(clonedHandlers);
+  effects.forEach(effect => mock[effect](effectHandlers));
+
+  return effectHandlers;
+}
+
+export function checkOutputs(testHarness, testCase, imageGallery, container, expectedOutput) {
+  return forEachOutput(expectedOutput, output => {
+    const { then } = testCase;
+    const { command, params } = output;
+    const matcher = then[command];
+
+    if (matcher === undefined) {
+      throw `test case > ${testCase.eventName} :: did not find matcher for command ${command}. Review ${prettyFormat(then)}`;
+    }
+    else {
+      matcher(testHarness, testCase, imageGallery, container, output);
+    }
+  });
 }
