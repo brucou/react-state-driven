@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  fireEvent, getByLabelText, getByTestId, queryByTestId, render, wait, waitForElement, within
+  fireEvent, getByLabelText, getByTestId, queryByTestId, render, wait, waitForElement, within, cleanup
 } from "react-testing-library";
 import { create_state_machine, decorateWithEntryActions, INIT_EVENT, NO_OUTPUT } from "state-transducer";
 import { COMMAND_RENDER, Machine } from "../src";
@@ -28,13 +28,23 @@ export function forEachOutput(expectedOutput, fn) {
 }
 
 QUnit.module("Testing image gallery component", {
-  // afterEach : cleanup
+  // Restore the default sandbox cf. https://sinonjs.org/releases/v7.1.1/general-setup/
+ beforeEach : () =>{
+   // document.getElementById('app').innerHTML = ''; // done by cleanup
+ },
+  afterEach : () => {
+   // Remove react tree (otherwise further rendering will diff against wrong tree)
+   cleanup();
+   // Restore sinon state - avoid memory leaks
+    sinon.restore();
+  }
 });
-// TODO : make a loop on testCase with Qunit test inside
-let testCase;
 
+// test case 0
 // ["nok", "start", "loading", "gallery", "loading", "gallery"]
-testCase = testCases[0];
+
+// TODO : I need to change the mock to simulate errors on call X... mmm that means defining the mock for each test,
+// so have a set up for each test... annoying
 
 // Test config
 const when = {
@@ -43,6 +53,7 @@ const when = {
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
 
     render(component, { container: anchor });
+    return Promise.resolve()
   },
   SEARCH: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
@@ -67,6 +78,9 @@ const when = {
     // Note that because we anyways chain assertions with promises, we naturally wait a tick between assertions, so
     // we could have done away with the `waitForElement`. For clarity purposes, we however let it be visible.
     return waitForElement(() => true);
+  },
+  SEARCH_FAILURE: (testHarness, testCase, component, anchor) => {
+ return
   }
 };
 const then = {
@@ -87,6 +101,7 @@ const then = {
     assert.ok(mockedEffectHandlers.runSearchQuery.calledWithExactly(query), `Search query '${query}' made when : ${prettyFormat({ [eventName]: eventData })}`);
   }
 };
+// TODO : defin a mock category function and then a mock config for ech category...
 const mocks = {
   imageGallerySwitchMap: {
     runSearchQuery: effectHandlers => {
@@ -95,56 +110,65 @@ const mocks = {
   }
 };
 
-QUnit.test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(assert) {
-  const rtl = { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText };
-  let actualOutputSequence = [];
-  const inputSequence = testCase.inputSequence;
-  // NOTE : by construction of the machine, length of input and output sequence are the same!!
-  const expectedFsmOutputSequence = testCase.outputSequence;
-  const expectedOutputSequence = expectedFsmOutputSequence;
-  const machine = imageGallerySwitchMap;
-  const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
-  const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
-  const mockedEffectHandlers = mock(machine.effectHandlers, mocks, "imageGallerySwitchMap");
+testCases.slice(0,2).forEach(testCase => {
+  QUnit.test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(assert) {
+    const rtl = { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText };
+    const inputSequence = testCase.inputSequence;
+    // NOTE : by construction of the machine, length of input and output sequence are the same!!
+    const expectedFsmOutputSequence = testCase.outputSequence;
+    const expectedOutputSequence = expectedFsmOutputSequence;
+    const machine = imageGallerySwitchMap;
+    const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
+    const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
+    const mockedEffectHandlers = mock(machine.effectHandlers, mocks, "imageGallerySwitchMap");
 
-  const imageGallery = React.createElement(Machine, {
-    eventHandler: stateTransducerRxAdapter,
-    preprocessor: machine.preprocessor,
-    fsm: fsm,
-    effectHandlers: mockedEffectHandlers,
-    commandHandlers: machine.commandHandlers,
-    componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
-    componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
-  }, null);
+    const imageGallery = React.createElement(Machine, {
+      eventHandler: stateTransducerRxAdapter,
+      preprocessor: machine.preprocessor,
+      fsm: fsm,
+      effectHandlers: mockedEffectHandlers,
+      commandHandlers: machine.commandHandlers,
+      componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
+      componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
+    }, null);
 
-  const done = assert.async(inputSequence.length);
+    const done = assert.async(inputSequence.length);
 
-  inputSequence.reduce((acc, input, index) => {
-    const eventName = Object.keys(input)[0];
-    const eventData = input[eventName];
-    const testHarness = { assert, rtl };
-    const testCase = { eventName, eventData, expectedOutput: expectedOutputSequence[index], mockedEffectHandlers, when, then, mocks };
+    caseExec: inputSequence.reduce((acc, input, index) => {
+      const eventName = Object.keys(input)[0];
+      const eventData = input[eventName];
+      const testHarness = { assert, rtl };
+      const testCase = { eventName, eventData, expectedOutput: expectedOutputSequence[index], mockedEffectHandlers, when, then, mocks };
 
-    return acc
-      .then(() => {
-        const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
+      return acc
+        .then(() => {
+          if (!when[eventName]) throw `Cannot find what to do to simulate event ${eventName}!`
+          if (typeof when[eventName] !== 'function') throw `Simulation for event ${eventName} must be defined through a function! Received ${prettyFormat(when[eventName])}`
 
-        if (simulateInput instanceof Promise) {
-          return simulateInput
-            .then(() => checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]));
-        }
-        else {
-          checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]);
-        }
-      })
-      .then(done);
-  }, Promise.resolve());
+          const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
+          if (simulateInput instanceof Promise) {
+            return simulateInput
+              .then(() => checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]));
+          }
+          else {
+            checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]);
+          }
+        })
+        .then(done)
+        .catch ( (e) => {
+          console.log(`Error`, e);
+          assert.ok(false, e);
+          done(e)
+        })
+        ;
+    }, Promise.resolve());
 
-  // TODO : error management...
-  // TODO : case when the event name is not in the assertion config.
-  // TODO : refactor this is hard to follow right now
-  // TODO : do not forget after each and before cleaning : https://sinonjs.org/releases/v7.1.1/general-setup/
-  // TODO : solve the problem of INIT EVENT not appearing in the input list...
-  // TODO : DOC
+    // TODO : error management...
+    // TODO : case when the event name is not in the assertion config.
+    // TODO : refactor this is hard to follow right now
+    // TODO : do not forget after each and before cleaning : https://sinonjs.org/releases/v7.1.1/general-setup/
+    // TODO : solve the problem of INIT EVENT not appearing in the input list...
+    // TODO : DOC
+  });
 });
 
