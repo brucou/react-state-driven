@@ -1,4 +1,5 @@
 // TODO : test actions are run in order..
+- actually trigger should also be part of deps, and should be spied on and tested too..
 - test new `effectHandlers` prop, and DOC it
 - analyze or doc. event handlers ALWAys async rendering, sync otherwise...
   - https://www.bennadel.com/blog/2893-setstate-state-mutation-operation-may-be-synchronous-in-reactjs.htm

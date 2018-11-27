@@ -1,7 +1,7 @@
 import React from "react";
 import h from "react-hyperscript";
 import hyperscript from "hyperscript-helpers";
-import { SEARCH, CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH_INPUT } from "./test-ids";
+import { SEARCH, CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH_INPUT, SEARCH_ERROR } from "./test-ids";
 
 const { div, button, span, input, form, section, img, h1 } = hyperscript(h);
 
@@ -52,7 +52,7 @@ export class Gallery extends React.Component {
     return (
       section(".ui-items", { "data-state": galleryState }, [
         isError
-          ? span(".ui-error", `Uh oh, search failed.`)
+          ? span(".ui-error", {"data-testid": SEARCH_ERROR}, `Uh oh, search failed.`)
           : items.map((item, i) => img(".ui-item", {
             src: item.media.m,
             style: { "--i": i },

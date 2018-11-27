@@ -11,7 +11,6 @@ import { BehaviorSubject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./fixtures/components";
 import HTML from "html-parse-stringify";
 import { assoc, forEachObjIndexed, keys, mergeAll, mergeLeft, omit, trim } from "ramda";
-import { forEachOutput } from "./image_gallery.specs";
 
 const { parse, stringify } = HTML;
 
@@ -272,13 +271,22 @@ export function normalizeHTML(str) {
 // Test framework helpers
 
 /** effectHandlers OUT */
-export function mock(effectHandlers, mocks, id) {
+export function mock(effectHandlers, mocks, mockCategory, machineId) {
   const clonedHandlers = Object.assign({}, effectHandlers);
-  const mock = mocks[id];
+  const mock = mocks[machineId][mockCategory];
   const effects = Object.keys(clonedHandlers);
   effects.forEach(effect => mock[effect](effectHandlers));
 
   return effectHandlers;
+}
+
+export function forEachOutput(expectedOutput, fn) {
+  if (!expectedOutput) return void 0;
+
+  expectedOutput.forEach((output, index) => {
+    if (output === NO_OUTPUT) return void 0;
+    fn(output, index);
+  });
 }
 
 export function checkOutputs(testHarness, testCase, imageGallery, container, expectedOutput) {

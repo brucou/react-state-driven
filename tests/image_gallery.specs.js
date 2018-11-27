@@ -1,14 +1,14 @@
 import React from "react";
 import {
-  fireEvent, getByLabelText, getByTestId, queryByTestId, render, wait, waitForElement, within, cleanup
+  cleanup, fireEvent, getAllByTestId, getByLabelText, getByTestId, queryByTestId, render, wait, waitForElement, within
 } from "react-testing-library";
-import { create_state_machine, decorateWithEntryActions, INIT_EVENT, NO_OUTPUT } from "state-transducer";
+import { create_state_machine, decorateWithEntryActions, INIT_EVENT } from "state-transducer";
 import { COMMAND_RENDER, Machine } from "../src";
 import { applyJSONpatch, checkOutputs, mock, noop, normalizeHTML, stateTransducerRxAdapter } from "./helpers";
 import { testCases } from "./assets/test-generation";
 import prettyFormat from "pretty-format";
 import { imageGallerySwitchMap } from "./fixtures/machines";
-import { SEARCH, SEARCH_INPUT } from "./fixtures/test-ids";
+import { CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH, SEARCH_ERROR, SEARCH_INPUT } from "./fixtures/test-ids";
 import HTML from "html-parse-stringify";
 import { COMMAND_SEARCH } from "../src/properties";
 import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
@@ -18,33 +18,26 @@ import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
 const container = document.getElementById("app");
 const { parse, stringify } = HTML;
 
-export function forEachOutput(expectedOutput, fn) {
-  if (!expectedOutput) return void 0;
-
-  expectedOutput.forEach((output, index) => {
-    if (output === NO_OUTPUT) return void 0;
-    fn(output, index);
-  });
-}
-
 QUnit.module("Testing image gallery component", {
   // Restore the default sandbox cf. https://sinonjs.org/releases/v7.1.1/general-setup/
- beforeEach : () =>{
-   // document.getElementById('app').innerHTML = ''; // done by cleanup
- },
-  afterEach : () => {
-   // Remove react tree (otherwise further rendering will diff against wrong tree)
-   cleanup();
-   // Restore sinon state - avoid memory leaks
+  beforeEach: () => {
+    // document.getElementById('app').innerHTML = ''; // done by cleanup
+  },
+  afterEach: () => {
+    // Remove react tree (otherwise further rendering will diff against wrong tree)
+    // For some reasons, the recommended way to do this (`cleanup`) fails on some specific tests
+    // cleanup();
+    render(null, { container: document.getElementById('app') });
+
+    // Restore sinon state - avoid memory leaks
     sinon.restore();
+  },
+  after : () => {
+    // We call cleanup here, because we haven\t called it before because of abovementioned bug
+    // That way we still free resources and avoid possible memory leaks
+    cleanup();
   }
 });
-
-// test case 0
-// ["nok", "start", "loading", "gallery", "loading", "gallery"]
-
-// TODO : I need to change the mock to simulate errors on call X... mmm that means defining the mock for each test,
-// so have a set up for each test... annoying
 
 // Test config
 const when = {
@@ -53,7 +46,7 @@ const when = {
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
 
     render(component, { container: anchor });
-    return Promise.resolve()
+    return waitForElement(() => true);
   },
   SEARCH: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
@@ -77,11 +70,47 @@ const when = {
     // we just described suffice.
     // Note that because we anyways chain assertions with promises, we naturally wait a tick between assertions, so
     // we could have done away with the `waitForElement`. For clarity purposes, we however let it be visible.
-    return waitForElement(() => true);
+    return waitForElement(() => getByTestId(container, PHOTO))
+    // !! very important for the edge case when the search success is the last to execute.
+    // Because of react async rendering, the DOM is not updated yet, that or some other reason anyways
+    // Maybe the problem is when the SECOND search success arrives, there already are elements with testid photo, so
+    // the wait does not happen, so to actually wait I need to explicitly wait... maybe
+      .then(()=> wait(() => true));
   },
   SEARCH_FAILURE: (testHarness, testCase, component, anchor) => {
- return
-  }
+    return waitForElement(() => getByTestId(container, SEARCH_ERROR));
+  },
+  SELECT_PHOTO: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    const item = eventData;
+    // find the img to click
+    const photos= getAllByTestId(container, PHOTO);
+    const photoToClick = photos.find(photoEl =>  photoEl.src === item.media.m);
+
+    fireEvent.click(photoToClick);
+    // Wait a tick defensively. Not strictly necessary as, by implementation of test harness, expectations are delayed
+    return waitForElement(() => getByTestId(container, PHOTO_DETAIL));
+  },
+  EXIT_PHOTO: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    const photoToClick= getByTestId(container, PHOTO_DETAIL);
+    fireEvent.click(photoToClick);
+
+    // Wait a tick defensively. Not strictly necessary as, by implementation of test harness, expectations are delayed
+    return waitForElement(() => true);
+  },
+  CANCEL_SEARCH: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    fireEvent.click(getByTestId(container, CANCEL_SEARCH));
+
+    return wait(() => !queryByTestId(container, CANCEL_SEARCH));
+  },
 };
 const then = {
   [COMMAND_RENDER]: (testHarness, testCase, component, anchor, output) => {
@@ -101,26 +130,79 @@ const then = {
     assert.ok(mockedEffectHandlers.runSearchQuery.calledWithExactly(query), `Search query '${query}' made when : ${prettyFormat({ [eventName]: eventData })}`);
   }
 };
-// TODO : defin a mock category function and then a mock config for ech category...
 const mocks = {
   imageGallerySwitchMap: {
-    runSearchQuery: effectHandlers => {
-      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery);
-    }
+    TWO_SEARCHES_NO_FAILURES: {
+      runSearchQuery: effectHandlers => {
+        return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(0,0));
+      }
+    },
+    TWO_SEARCHES_S2_1_FAILURES: {
+      runSearchQuery: effectHandlers => {
+      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(0,1));
+    }},
+    TWO_SEARCHES_S2_2_FAILURES: {
+      runSearchQuery: effectHandlers => {
+      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(0,2));
+    }},
+    TWO_SEARCHES_S1_1_S2_1_FAILURES: {
+      runSearchQuery: effectHandlers => {
+      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(1,1));
+    }},
+    TWO_SEARCHES_S1_2_FAILURES: {
+      runSearchQuery: effectHandlers => {
+      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(2,0));
+    }},
+    TWO_SEARCHES_S1_1_FAILURES: {
+      runSearchQuery: effectHandlers => {
+      return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(1,0));
+    }}
   }
 };
 
-testCases.slice(0,2).forEach(testCase => {
+function getMockCategory(inputSequence){
+  const FIRST_SEARCH = 'cathether';
+  const SECOND_SEARCH = 'cat';
+  const [s1Failures, s2Failures] = inputSequence.reduce((acc, input)=>{
+    let [s1Failures, s2Failures, lastSearch] = acc;
+    const eventName = Object.keys(input)[0];
+    const eventData = input[eventName];
+
+    if (eventName === 'SEARCH'){
+      lastSearch = eventData;
+    }
+    if (eventName === 'SEARCH_FAILURE'){
+      lastSearch === FIRST_SEARCH ? s1Failures++ : s2Failures++
+    }
+
+    return [s1Failures, s2Failures, lastSearch]
+  }, [0,0, null]);
+
+  const choiceTable = {
+    '00' : 'TWO_SEARCHES_NO_FAILURES',
+    '10' : 'TWO_SEARCHES_S1_1_FAILURES',
+    '20' : 'TWO_SEARCHES_S1_2_FAILURES',
+    '01' : 'TWO_SEARCHES_S2_1_FAILURES',
+    '02' : 'TWO_SEARCHES_S2_2_FAILURES',
+    '11' : 'TWO_SEARCHES_S1_1_S2_1_FAILURES',
+  };
+
+  return choiceTable[""+s1Failures+s2Failures]
+}
+
+// testCases.slice(0, 30).forEach(testCase => { // This is to test only a slice on the test scenarii
+testCases.forEach(testCase => {
   QUnit.test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(assert) {
     const rtl = { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText };
     const inputSequence = testCase.inputSequence;
+    const mockCategory = getMockCategory(inputSequence);
     // NOTE : by construction of the machine, length of input and output sequence are the same!!
     const expectedFsmOutputSequence = testCase.outputSequence;
     const expectedOutputSequence = expectedFsmOutputSequence;
     const machine = imageGallerySwitchMap;
     const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
     const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
-    const mockedEffectHandlers = mock(machine.effectHandlers, mocks, "imageGallerySwitchMap");
+    const mockedEffectHandlers = mock(machine.effectHandlers, mocks, mockCategory, "imageGallerySwitchMap");
 
     const imageGallery = React.createElement(Machine, {
       eventHandler: stateTransducerRxAdapter,
@@ -134,16 +216,27 @@ testCases.slice(0,2).forEach(testCase => {
 
     const done = assert.async(inputSequence.length);
 
-    caseExec: inputSequence.reduce((acc, input, index) => {
+    inputSequence.reduce((acc, input, index) => {
       const eventName = Object.keys(input)[0];
       const eventData = input[eventName];
       const testHarness = { assert, rtl };
-      const testCase = { eventName, eventData, expectedOutput: expectedOutputSequence[index], mockedEffectHandlers, when, then, mocks };
+      const testCase = {
+        eventName,
+        eventData,
+        expectedOutput: expectedOutputSequence[index],
+        inputSequence,
+        expectedOutputSequence,
+        mockedEffectHandlers,
+        when,
+        then,
+        getMockCategory,
+        mocks
+      };
 
       return acc
         .then(() => {
-          if (!when[eventName]) throw `Cannot find what to do to simulate event ${eventName}!`
-          if (typeof when[eventName] !== 'function') throw `Simulation for event ${eventName} must be defined through a function! Received ${prettyFormat(when[eventName])}`
+          if (!when[eventName]) throw `Cannot find what to do to simulate event ${eventName}!`;
+          if (typeof when[eventName] !== "function") throw `Simulation for event ${eventName} must be defined through a function! Received ${prettyFormat(when[eventName])}`;
 
           const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
           if (simulateInput instanceof Promise) {
@@ -155,19 +248,14 @@ testCases.slice(0,2).forEach(testCase => {
           }
         })
         .then(done)
-        .catch ( (e) => {
+        .catch((e) => {
           console.log(`Error`, e);
           assert.ok(false, e);
-          done(e)
+          done(e);
         })
         ;
     }, Promise.resolve());
 
-    // TODO : error management...
-    // TODO : case when the event name is not in the assertion config.
-    // TODO : refactor this is hard to follow right now
-    // TODO : do not forget after each and before cleaning : https://sinonjs.org/releases/v7.1.1/general-setup/
-    // TODO : solve the problem of INIT EVENT not appearing in the input list...
     // TODO : DOC
   });
 });
