@@ -25,8 +25,8 @@ QUnit.module("Testing image gallery component", {
   afterEach: () => {
     // Remove react tree (otherwise further rendering will diff against wrong tree)
     // For some reasons, the recommended way to do this (`cleanup`) fails on some specific tests
-    cleanup();
-    // render(null, { container: document.getElementById('app') });
+    // cleanup();
+    render(null, { container: document.getElementById('app') });
 
     // Restore the default sandbox cf. https://sinonjs.org/releases/v7.1.1/general-setup/
     sinon.restore();

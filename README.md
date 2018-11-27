@@ -1,3 +1,30 @@
+# bug reproduction
+- checkout the branch
+- run npm test in a terminal. A web browser should automatically pop-up (localhost://8080)
+- test runner is Qunit, tests are done on the real DOM in a real browser
+- the DOM produced by the app is displayed in the browser in an element `#app` located before the
+ Qunit paraphernalia
+
+The test scenarii consist of 27 tests. Each of these tests run an input sequence (click or else) 
+through the DOM, and observe for each input the result on the DOM. Tests are automatically 
+generated from the modelization of the app behaviour by a state machine.
+
+On the first run, all is good (independently of which test that be). On the second run 
+(independently of which test that be), the test fails. 
+
+**Workaround :**
+- Changing `cleanup` by `render(null,...)`  works.
+
+**Possible cause**
+- Some debugging shows that the `div` where the app is mounted disappears from the DOM on the 
+second test running. Could it be that because the `waitForElement` being triggered by a DOM 
+mutation observer does not detect anything because well there is no DOM element anymore ?? 
+- Another important difference vs, what other people are doing is that I test in a real browser, 
+with QUnit.
+
+Other than, feel free to ask me any question that may clarify the issue. I honestly don't 
+recommend anybody to spend time solving this. I almost got nuts.
+
 - [Motivation](#motivation)
 - [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
 - [Installation](#installation)
