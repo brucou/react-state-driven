@@ -88,10 +88,7 @@ export const imageGallerySwitchMap = {
     loading: (extendedState, eventData, fsmSettings) => {
       const { items, photo } = extendedState;
       const query = eventData;
-      const searchCommand = {
-        command: COMMAND_SEARCH,
-        params: query
-      };
+      const searchCommand = { command: COMMAND_SEARCH, params: query };
       const renderGalleryAction = renderAction(trigger =>
         h(GalleryApp, { query, items, trigger, photo, gallery: "loading" }, [])
       );
@@ -108,7 +105,9 @@ export const imageGallerySwitchMap = {
   },
   effectHandlers: { runSearchQuery },
   commandHandlers: {
-    [COMMAND_SEARCH]: (obs, { runSearchQuery }) => {
+    [COMMAND_SEARCH]: (obs, effectHandlers) => {
+      const { runSearchQuery } = effectHandlers;
+
       return obs.pipe(switchMap(({ trigger, params }) => {
         const query = params;
         return runSearchQuery(query)

@@ -102,9 +102,11 @@ npm install react-state-driven
 ```
 
 # API design goals
-We want to have an integration which is generic enough to accomodate a large set of use cases, 
+We want to have an integration which is generic enough to accommodate a large set of use cases, 
 and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
-and API. In particular :
+and API. Unit-testing should ideally be based on the specifications of the behaviour of the 
+component rather than its implementation details, and leverage the automatic test generator of 
+the underlying `state-tranducer` library. In particular :
 
 - it should be seamless to use both controlled and uncontrolled components
 - it should be possible to use without risk of interference standard React features like `Context`
@@ -112,22 +114,24 @@ and API. In particular :
 painless port to React copycats (Preact, etc.)
 - non-React functionalities should be coupled only through interfaces, allowing to use any 
 suitable implementation
+- the specifics of the implementation should not impact testing (hooks, suspense, context, etc.)
 
 As a result of these design goals :
 - we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
 - the component user can of course use the whole extent of the API at disposal, those restrictions 
-only concern our implementation of the `<Machine /` component.
+only concern our implementation of the `<Machine />` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
 - any state machine implementation can be substituted to our library provided that :
-  - it implements a `.start` and `.yield` methods, with `start` being sugar for `.yield({init: some
-   data})`.
+  - it implements a `.yield` method
   - it produces no effects
   - it returns an array of commands (implementation relying on callback or event hooks cannot be 
   integrated)
+- we use dependency injection to pass the modules responsible for effects to the `<Machine 
+/>` component
 
 # API
-##` <Machine fsm, commandHandlers, preprocessor, subjectFactory, componentDidUpdate, componentWillUpdate />`
+## ` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
@@ -184,61 +188,113 @@ const renderGalleryApp = machineState => (extendedState, eventData, fsmSettings)
 
 export const machines = {
   imageGallery: {
-    initialExtendedState: { query: '', items: [], photo: undefined },
-    states: { start: '', loading: '', gallery: '', error: '', photo: '' },
-    events: ['SEARCH', 'SEARCH_SUCCESS', 'SEARCH_FAILURE', 'CANCEL_SEARCH', 'SELECT_PHOTO', 'EXIT_PHOTO'],
-    transitions : ... transitions not included here, cf. visualization) ...,
-    preprocessor: rawEventSource => rawEventSource
-      .map(ev => {
-        const { eventName, eventData: e, ref } = destructureEvent(ev);
-
-        // Form raw events
-        if (eventName === 'onSubmit') {
-          e.persist();
-          e.preventDefault();
-          return { SEARCH: ref.current.value }
+      initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
+      states: { start: "", loading: "", gallery: "", error: "", photo: "" },
+      events: ["SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
+      preprocessor: rawEventSource => rawEventSource.pipe(
+        map(ev => {
+          const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
+    
+          if (rawEventName === INIT_EVENT) {
+            return { [INIT_EVENT]: void 0 };
+          }
+          // Form raw events
+          else if (rawEventName === "onSubmit") {
+            e.persist();
+            e.preventDefault();
+            return { SEARCH: ref.current.value };
+          }
+          else if (rawEventName === "onCancelClick") {
+            return { CANCEL_SEARCH: void 0 };
+          }
+          // Gallery
+          else if (rawEventName === "onGalleryClick") {
+            const item = e;
+            return { SELECT_PHOTO: item };
+          }
+          // Photo detail
+          else if (rawEventName === "onPhotoClick") {
+            return { EXIT_PHOTO: void 0 };
+          }
+          // System events
+          else if (rawEventName === "SEARCH_SUCCESS") {
+            const items = e;
+            return { SEARCH_SUCCESS: items };
+          }
+          else if (rawEventName === "SEARCH_FAILURE") {
+            return { SEARCH_FAILURE: void 0 };
+          }
+    
+          return NO_INTENT;
+        }),
+        filter(x => x !== NO_INTENT)
+      ),
+      transitions: [
+        { from: INIT_STATE, event: INIT_EVENT, to: "start", action: NO_ACTIONS },
+        { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        {
+          from: "loading", event: "SEARCH_SUCCESS", to: "gallery", action: (extendedState, eventData, fsmSettings) => {
+            const items = eventData;
+    
+            return {
+              updates: [{ op: "add", path: "/items", value: items }],
+              outputs: NO_OUTPUT
+            };
+          }
+        },
+        { from: "loading", event: "SEARCH_FAILURE", to: "error", action: NO_ACTIONS },
+        { from: "loading", event: "CANCEL_SEARCH", to: "gallery", action: NO_ACTIONS },
+        { from: "error", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        { from: "gallery", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        {
+          from: "gallery", event: "SELECT_PHOTO", to: "photo", action: (extendedState, eventData, fsmSettings) => {
+            const item = eventData;
+    
+            return {
+              updates: [{ op: "add", path: "/photo", value: item }],
+              outputs: NO_OUTPUT
+            };
+          }
+        },
+        { from: "photo", event: "EXIT_PHOTO", to: "gallery", action: NO_ACTIONS }
+      ],
+      entryActions: {
+        loading: (extendedState, eventData, fsmSettings) => {
+          const { items, photo } = extendedState;
+          const query = eventData;
+          const searchCommand = { command: COMMAND_SEARCH, params: query };
+          const renderGalleryAction = renderAction(trigger =>
+            h(GalleryApp, { query, items, trigger, photo, gallery: "loading" }, [])
+          );
+    
+          return {
+            outputs: [searchCommand, renderGalleryAction.outputs],
+            updates: []
+          };
+        },
+        photo: renderGalleryApp("photo"),
+        gallery: renderGalleryApp("gallery"),
+        error: renderGalleryApp("error"),
+        start: renderGalleryApp("start")
+      },
+      effectHandlers: { runSearchQuery },
+      commandHandlers: {
+        [COMMAND_SEARCH]: (obs, { runSearchQuery }) => {
+          return obs.pipe(switchMap(({ trigger, params }) => {
+            const query = params;
+            return runSearchQuery(query)
+              .then(data => {
+                trigger("SEARCH_SUCCESS")(data.items);
+              })
+              .catch(error => {
+                trigger("SEARCH_FAILURE")(void 0);
+              });
+          }));
         }
-        else if (eventName === 'onCancelClick') {
-          return { CANCEL_SEARCH: void 0 }
-        }
-        // Gallery
-        else if (eventName === 'onGalleryClick') {
-          const item = e;
-          return { SELECT_PHOTO: item }
-        }
-        // Photo detail
-        else if (eventName === 'onPhotoClick') {
-          return { EXIT_PHOTO: void 0 }
-        }
-        // System events
-        else if (eventName === 'SEARCH_SUCCESS') {
-          const items = e;
-          return { SEARCH_SUCCESS: items }
-        }
-        else if (eventName === 'SEARCH_FAILURE') {
-          return { SEARCH_FAILURE: void 0 }
-        }
-
-        return NO_INTENT
-      })
-      .filter(x => x !== NO_INTENT),
-    commandHandlers: {
-      [COMMAND_SEARCH]: obs => {
-         return obs.switchMap(({trigger, params}) => {
-           const query = params;
-           return runSearchQuery(query)
-             .then(data => {
-               trigger('SEARCH_SUCCESS')(data.items)
-             })
-             .catch(error => {
-               trigger('SEARCH_FAILURE')(void 0)
-             });
-         })
-      }
-    },
-    inject: new Flipping(),
-    componentDidUpdate: flipping => () => {flipping.read();},
-    componentWillUpdate: flipping => () => {flipping.flip();}
+      },
+      inject: new Flipping(),
+      componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
+      componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();},
   }
 };
 
@@ -337,8 +393,7 @@ concurrency issues related to outdated requests (i.e. cancelled requests whose
 response nevertheless arrive). We could handle that in the state machine but we
  do it here, as it otherwise complicates needlessly the machine.
 
-Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`]
-(https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
+Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
 (`flipping.flip()`). 
 
@@ -349,14 +404,25 @@ will always be as described.
 Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
 
 Let's just say here that adapting an event processing library is the most complicated to 
-interface. This is already done for Rxjs and you can just import the adapter and use it. 
-Concretely, the interface involves:
-- `create`, `merge` functions, which respectively create and merge observables
--  `subjectFactory` which creates a subject, which implements the observable and observer interface 
-- has the following operators available : `filter`, `map`, `flatMap`, `shareReplay`, which can be
- used by means of a `pipe` method on the observable prototype
-- emission of observables can only be started on `subscribe` (i.e. interfacing an event library 
-like `xstream` is not advised)
+interface. Here is for example a Rxjs adapter used for the demo with `react-state-driven` :
+
+```javascript
+import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
+import { filter, flatMap, map, shareReplay, startWith } from "rxjs/operators";
+
+const stateTransducerRxAdapter = {
+  // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
+  subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
+  merge: merge,
+  create: fn => Observable.create(fn),
+  startWith : startWith,
+  filter: filter,
+  map: map,
+  flatMap: flatMap,
+  shareReplay: shareReplay
+};
+
+```
 
 ### Contracts
 - the `[COMMAND_RENDER]` command is reserved and must not be used in the command handlers' 
@@ -387,17 +453,17 @@ to be executed
   context of the `<Machine/>` component
   - if the command is not a render command, the global handler dispatches the command to the 
   preconfigured command handlers
-- All command handlers are passed the raw event source emitter, so they can send back events
-  - Render commands leads to definition of React components with event handlers. Those event 
+- All command handlers are passed two arguments : 
+  - an observable containing 
+    - the raw event source emitter, so they can send back events, 
+    - the `params` property of commands to be processed by the handler
+  - an object of type `EffectHandlers` which contains any relevant dependencies needed to 
+  perform effects (that is the object passed in props to the `<Machine/>` component)
+- Render commands leads to definition of React components with event handlers. Those event 
   handlers can pass their raw events to the machine thanks to the raw event source emitter
-  - Non-render commands leads to the execution of procedures which may be successful or fail. The
+- Non-render commands leads to the execution of procedures which may be successful or fail. The
    command handler can pass back information to the machine thanks to the raw event source 
-   emitter. There are two ways to specify a non-render command :
-     - through a regular procedure taking two parameters (the raw event emitter and the command 
-     params)
-     - through a function receiving the stream of commands that it handles, as in our example. 
-     Note that this function will only receive in that stream the commands it handles, i.e. a 
-     `SEARCH` handler will receive a stream of `SEARCH` commands.
+   emitter.
 - The event source is created with the subject factory passed as parameters. That subject must 
 have the `next, complete, error` properties defined (`Observer` interface), the properties 
 `subscribe` defined (`Observable` interface), and at least five operators (`map`, `filter`, `flatMap`, 
@@ -459,7 +525,7 @@ All demos from examples can be found in the [demo repository](https://github.com
 - image search app
 
 
-# Testing a machine
+# Testing
 As we mentioned previously, the `<Machine/>` mediator is made from the monadic composition of four 
 configurable units : `event handler -> preprocessor -> state machine -> command handler`. 
 White-box testing of the configured component hence involves testing each of the aforementionned
@@ -675,7 +741,7 @@ call to `flickr`.
 
 Render commands are dealt with as a special case : they feature a function 
 which eventually compute a react element to be rendered. We **DO NOT test the react component** at 
-this level. We simply test against the `props` of that components as they describe entirely the 
+this level. We simply test against the `props` of that component as they describe entirely the 
 visual appearance of that component (i.e. the component only depends on `props` for its render 
 concern - no state, no context). This makes for a very straight forward testing. The fact that 
 the component does not have state is not fortuitous - we know the control state (and extended state)
@@ -686,7 +752,7 @@ the component does not have state is not fortuitous - we know the control state 
 
 Note that the React component still have to be tested, but that can be done separately, by any of
  the usual React specific testing technique ([storybook](https://storybook.js.org/) is a nice way
-  to do that, specially with stateless component). We have an architecture made of decoupled 
+  to do that, specially with stateless components). We have an architecture made of decoupled 
   parts, and we can test each part separately **with the best tool available to that purpose**.
 
 ```javascript
@@ -814,23 +880,118 @@ The test for the component are conceptually mostly the same than for the state m
 addition that the scope of the system under test is larger : it includes the rest of the 
 component's modules. It ensues from this, that provided we have already tested satisfactorily 
 against the state machine, we can afford to enact only those tests which are useful for 
-testing the rest of the modules. This means tests which should exercise all the events accepted 
-by the component, and produce all the commands handled by the command handlers. This means in 
-general that a *All-transitions-coverage* criteria would be sufficient, when there is no complex 
-logic lying in event preprocessor and command handler.
+testing the rest of the modules. This means at least tests which should exercise all the events 
+accepted by the component, and produce all the commands handled by the command handlers. This 
+means in general that a *All-transitions-coverage* criteria would be sufficient, when there is 
+no complex logic lying in event preprocessor and command handler.
 
-Note that the component testing should include, when they are present, any aspect of its 
-specifications not covered by the state machine. This can for instance be, in a user interface, 
-field entry persistance, which is handled by the browser.
+Note that the component testing should additionally include, when they are present, any aspect of 
+its specifications not covered by the state machine (for instance covered by the preprocessor). 
+This can for instance be, in a user interface, field entry persistance, which is handled by the 
+browser. Those nice words said, in our example, we simply don't bother.
 
+Testing the component involves :
+- inserting in the component's view data attributes (`data-testid`) whose only aim is to point at
+ DOM elements used in the testing process (that should be exactly those who are involved in the 
+ specification of the behavior of the component) 
+- mocking effects
+- mapping test machine's input sequence to component's test event sequence (click, submit, etc.)
+- For each event, determine the timing when to execute the test assertion and execute the test assertion 
+
+### Test attributes
+Test attributes give a more robust testing experience, by further decoupling the testing process 
+from implementation details (like css selectors). For more information on the technique, please 
+refer to the 
+[`react-testing-library`](https://github.com/kentcdodds/react-testing-library) repertory.
+
+We could go a step further in the decoupling by replacing ids with details from the 
+specifications (i.e. the DOM element with attribute `data-testid` set to `CANCEL` is the button 
+with the text `CANCEL`), but we chose to remain at the `data-attribute` level for our example, 
+so that we only use one technique for simplicity.
+
+### Mocking effects
+Effect modules are injected into the `<Machine />` component through the `effectHandlers` prop. 
+That prop is provided to command handlers, which can use it to perform effects. At testing time, 
+the prop can be substituted for mocked effect handlers. 
+
+This gives flexibility to the leaking of testing concerns into the implementation. For instance, 
+in our example, our flickr command handler basically consists in making an API request on a 
+flickr endpoint. We could have mocked the request execution (say `fetchJsonp`), i.e. operating at a
+ es6 module level. Instead, we are mocking `runSearchQuery` which takes a query and returns 
+ results already formatted, i.e. operating at the domain level. 
+
+When mocking it may be necessary to gather the mocks in several categories, assigning a mock 
+behaviour to a set of test scenari. For instance, in our example, one category would be that of 
+test cases which succeed in fetching all their requests. Another category would be that of test 
+cases which fail the first request.
+
+For each category, for each effect handlers, function which mocks the effects handlers in a way 
+compatible with the category must be provided in a object whose keys are the category.
+
+In our image gallery example, it goes like this : 
+
+```javascript
+export const imageGallerySwitchMap = {
+(...)
+  effectHandlers: { runSearchQuery },
+  commandHandlers: {
+    [COMMAND_SEARCH]: (obs, effectHandlers) => {
+      const { runSearchQuery } = effectHandlers;
+
+      return obs.pipe(switchMap(({ trigger, params }) => {
+        const query = params;
+        return runSearchQuery(query)
+          .then(data => {
+            trigger("SEARCH_SUCCESS")(data.items);
+          })
+          .catch(error => {
+            trigger("SEARCH_FAILURE")(void 0);
+          });
+      }));
+    }
+  },
+(...)
+}
+
+const mocks = {
+    TWO_SEARCHES_NO_FAILURES: {
+      runSearchQuery: effectHandlers => {
+        return sinon.stub(effectHandlers, "runSearchQuery").callsFake(imageGallerySwitchMap.mocks.runSearchQuery(0,0));
+      }
+    },
+    (...)
+};
+```
+
+### From test input sequence to events
+The state machine test input sequences can be reused for testing the whole component. However, 
+those input must be converted to events for the component. For instance, a `{SEARCH : query}` input 
+must be mapped to the sequence of events : `[fill the DOM element with selector [data-testid=...] 
+with query, click the DOM element with selector [data-testid=...]]`. Those events must then be 
+simulated. Once a set of events have been simulated, it is often necessary for the effects of the 
+events to be apparent, at what time the test assertions can proceed (cf. next section). For 
+instance, any update of the screen by React is asynchronous. It will hence not be possible to 
+observe the new screen on the same tick as passing the submit event.
+
+We chose `react-testing-library`, among other reasons, for the ease by which it is possible to 
+specify waiting conditions for assertions to be executed. 
+
+### Test assertion 
+
+ 
 ## Additional considerations
-TODO 
-Last but not least, the techniques we have been mentioning are generic and apply to any state 
-machine model. It is also a good idea, if we have properties/invariants in our specifications, to use 
-property-based testing to check on those. 
-
-### Testing the component
-TODO : the image search gallery
+- we chose to perform our tests completely in the browser
+  - this gives more confidence as this is what an actual user will be using
+  - the debugging experience is much better (all chrome debugger tools are available, faster 
+  than node-debug, and the component is displayed on the screen which allows to visually detect 
+  defaults)
+  - test execution remains fast : we were able to run our 27 tests with 300+ assertions under 4 
+  seconds.
+  - the `react-testing-library` testing library used works very similarly to `testcafe` a 
+  terrific end-to-end testing library, possibly making it easier to promote some unit tests to 
+  end-to-end tests 
+- If there are have properties/invariants in the component specifications, property-based testing
+ can be put to good use. 
 
 # Prior art and useful references
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)

@@ -1,11 +1,10 @@
 // TODO : test actions are run in order..
+- make a RADME section on how to update rxjs or eventHandler adapter...
 - update the README to new specs : DOC it
 - actually trigger should also be part of deps, and should be spied on and tested too..
 - test new `effectHandlers` prop, and DOC it
 - analyze or doc. event handlers ALWAys async rendering, sync otherwise...
   - https://www.bennadel.com/blog/2893-setstate-state-mutation-operation-may-be-synchronous-in-reactjs.htm
-- maybe use https://github.com/sunesimonsen/react-dom-testing ? instead of kent dodds? mmm NO, no
- wait, waitFor
 - look at that plan-oriented-testing (recoup with the improvement in the testing generation)
 - explain testing
 - explain the resulting architecture
