@@ -896,7 +896,17 @@ Testing the component involves :
  specification of the behavior of the component) 
 - mocking effects
 - mapping test machine's input sequence to component's test event sequence (click, submit, etc.)
-- For each event, determine the timing when to execute the test assertion and execute the test assertion 
+- For each event, determine the timing when to execute the test assertion and execute the test assertion
+
+In short:
+
+```ejs
+Fsm testing : input seq. => fsm => output seq.
+
+Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output 
+seq.)
+```
+
 
 ### Test attributes
 Test attributes give a more robust testing experience, by further decoupling the testing process 
@@ -976,9 +986,167 @@ observe the new screen on the same tick as passing the submit event.
 We chose `react-testing-library`, among other reasons, for the ease by which it is possible to 
 specify waiting conditions for assertions to be executed. 
 
-### Test assertion 
-
+The mapping event(s) to input(s) may be a n-to-n mapping, which may then complicate writing the 
+event sequence. Generally speaking, the more characteristics of the preprocessor are used (stream 
+ combinators, schedulers, etc.), the more complex it will be to simulate events on the user end. 
+ For instance, assuming a drag-and-drop event did not exist and would be handled by the 
+ preprocessor, that drag-and-drop event would have to be carefully recreated through a timely 
+ sequence of primary events (click, move while clicking, etc.). In general however, most of the 
+ mappings will be simple simple 1-to-1 mappings. That is the case for our image gallery example.
  
+ Here are some examples of 1-to-1 mappings (`onSubmit` -> `SEARCH`):
+ 
+```javascript
+   preprocessor: rawEventSource => rawEventSource.pipe(
+     map(ev => {
+       const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
+ 
+       if (rawEventName === INIT_EVENT) {
+         return { [INIT_EVENT]: void 0 };
+       }
+       // Form raw events
+       else if (rawEventName === "onSubmit") {
+         e.persist();
+         e.preventDefault();
+         return { SEARCH: ref.current.value };
+       }
+       else if (rawEventName === "onCancelClick") {
+         return { CANCEL_SEARCH: void 0 };
+       }
+       (...)
+
+``` 
+
+Here is how events are simulated in our image gallery example :
+
+```javascript
+// Test config
+const when = {
+  [INIT_EVENT]: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+
+    render(component, { container: anchor });
+    return waitForElement(() => true);
+  },
+  SEARCH: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    const query = eventData;
+
+    fireEvent.change(getByTestId(container, SEARCH_INPUT), { target: { value: query } });
+    fireEvent.submit(getByTestId(container, SEARCH));
+  },
+  SEARCH_SUCCESS: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+
+    // NOTE: System events are sent by mocked effect handlers (here the API call). On receiving the search response, the
+    // rendering happens asynchronously, so we need to wait a little to get the updated DOM. It is also possible
+    // that the DOM is not updated (because the new DOM is exactly as the old DOM...). The less error-prone way is
+    // to just wait `n > 1` tick (that should be enough for React to render) and to read the DOM then. No events
+    // will be received during those `n` ticks to be sure that React had the time to update the DOM.
+    // Those time-dependencies are tricky in theory. However, in practice most of the time, heuristics like the one
+    // we just described suffice.
+    // Note that because we anyways chain assertions with promises, we naturally wait a tick between assertions, so
+    // we could have done away with the `waitForElement`. For clarity purposes, we however let it be visible.
+    return waitForElement(() => getByTestId(container, PHOTO))
+    // !! very important for the edge case when the search success is the last to execute.
+    // Because of react async rendering, the DOM is not updated yet, that or some other reason anyways
+    // Maybe the problem is when the SECOND search success arrives, there already are elements with testid photo, so
+    // the wait does not happen, so to actually wait I need to explicitly wait... maybe
+      .then(()=> wait(() => true));
+  },
+  SEARCH_FAILURE: (testHarness, testCase, component, anchor) => {
+    return waitForElement(() => getByTestId(container, SEARCH_ERROR));
+  },
+  SELECT_PHOTO: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    const item = eventData;
+    // find the img to click
+    const photos= getAllByTestId(container, PHOTO);
+    const photoToClick = photos.find(photoEl =>  photoEl.src === item.media.m);
+
+    fireEvent.click(photoToClick);
+    // Wait a tick defensively. Not strictly necessary as, by implementation of test harness, expectations are delayed
+    return waitForElement(() => getByTestId(container, PHOTO_DETAIL));
+  },
+  EXIT_PHOTO: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    const photoToClick= getByTestId(container, PHOTO_DETAIL);
+    fireEvent.click(photoToClick);
+
+    // Wait a tick defensively. Not strictly necessary as, by implementation of test harness, expectations are delayed
+    return waitForElement(() => true);
+  },
+  CANCEL_SEARCH: (testHarness, testCase, component, anchor) => {
+    const { assert, rtl } = testHarness;
+    const { eventData, expectedOutput, mockedEffectHandlers } = testCase;
+    const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
+    fireEvent.click(getByTestId(container, CANCEL_SEARCH));
+
+    return wait(() => !queryByTestId(container, CANCEL_SEARCH));
+  },
+};
+
+```
+
+One can observe how a  `SEARCH` input in a test machine input sequence is mapped to filling an 
+input (`change` event) and then submitting the form (`submit` event). One can also observe the 
+waiting conditions appearing most of the time. For instance, a `CANCEL_SEARCH` input is mapped to
+ click on the cancel button, and then we wait till the button disappears from the screen to 
+ perform our assertion (cf. `react-testing-library` for details about the `wait` semantics).
+
+### Test assertion 
+Once the appropriate waiting conditions have been fulfilled, assertions are run corresponding to 
+the expected outcome of simulated event. To know which assertion to run, the fsm is used as 
+oracle. Output test sequences resulting from running the fsm's input test sequences are turned 
+into assertions. For instance, we said previously that a `SUBMIT` event may be mapped to a `SEARCH` 
+input to the fsm. That `SEARCH` input passed to fsm results in two commands : the API call and 
+the rendering of the loading screen. Those two commands correspond to two assertions. The API 
+call will be matched to an assertion on the mocked `runSearchQuery` effect. The render will be 
+matched to an assertion on the inner html of the anchoring DOM element for the component.
+
+For the image gallery specs, that gives :
+
+```javascript
+const then = {
+  [COMMAND_RENDER]: (testHarness, testCase, component, anchor, output) => {
+    const { command, params } = output;
+    const { assert, rtl } = testHarness;
+    const { eventName, eventData, mockedEffectHandlers } = testCase;
+    const actualOutput = normalizeHTML(anchor.innerHTML);
+    const expectedOutput = normalizeHTML(params);
+    assert.deepEqual(actualOutput, expectedOutput, `Correct render when : ${prettyFormat({ [eventName]: eventData })}`);
+  },
+  [COMMAND_SEARCH]: (testHarness, testCase, component, anchor, output) => {
+    const { assert, rtl } = testHarness;
+    const { eventName, eventData, mockedEffectHandlers } = testCase;
+    const query = eventData;
+
+    assert.ok(mockedEffectHandlers.runSearchQuery.calledWithExactly(query), `Search query '${query}' made when : ${prettyFormat({ [eventName]: eventData })}`);
+  }
+};
+```
+
+Note as we normalize (`normalizeHTML`)the inner HTML from our actual and expected screen in order to
+ be able to compare them. Concretely, we remove the `data-testid` atributed from the html, so our test do not
+ depend on the presence or absence of such attributes. We also list a html tag properties in a 
+ predetermined order, and add a semi colon to all `style` properties. While this is not perfect 
+ (ascii characters could also be normalized to unicode for applications supporting exotic 
+ languages). This is however found to eliminate most of the cases of discrepancy, where the HTML
+  strings differ, but the semantics of both HTML are exactly the same. It might sounds strange 
+  and brittle to test against HTML, and one might come to miss the snapshot feature of `jest`. 
+  However, remember that the expected HTML was generated already for us when we ran the test cases 
+  for the state machine. We then never had to manually copy and paste HTML strings from anywhere, 
+  which would be a deal-breaker, considering we run hundreds of tests for a single fsm.
+    
+
 ## Additional considerations
 - we chose to perform our tests completely in the browser
   - this gives more confidence as this is what an actual user will be using
@@ -992,8 +1160,28 @@ specify waiting conditions for assertions to be executed.
   end-to-end tests 
 - If there are have properties/invariants in the component specifications, property-based testing
  can be put to good use. 
+- you could also skip the semi-manual validation of the state machine and directly use the 
+generated input sequences to test against the component. That seems very attractive because that is 
+really less work. On the flipside, if a component test fails, you will have to decide whether it 
+was the state machine which was wrongly specified or the other modules (preprocessor, command 
+handler, effect handler) which are failing. That is a typical cost/benefit analysis to undertake.
+ My ideal scenario is to test the fsm first, then the component.
+- we use Qunit and `react-testing-library`. However, because we used no special or esoteric 
+feature of our testing framework, it is easy to use any framework of our choice, and suitable 
+replacement for the browser. The reverse would not be true : relying on jest mocking and 
+snapshotting features means being married to jest.
 
 # Prior art and useful references
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
 - [React automata](https://github.com/MicheleBertoli/react-automata)
 - [react-xstate-js](https://github.com/bradwoods/react-xstate-js)
+
+# Tips
+- the preprocessor is optional. You may also use a pass through preprocessor which simply pass 
+along as is events from the user interface to the machine. This naturally couples the view to the
+ machine, but that is not an issue if that machine is only designed for that user interface and 
+ not intended to be reused in any other context. In the case of our image gallery component, we 
+ could imagine a reusable parameterizable machine which implements the behaviour of a 
+ generic search input. Having a preprocessor enables to integrate such machines without a hiccup,
+  while still disappearing out of the picture if not needed.
+ 
