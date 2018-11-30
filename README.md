@@ -3,6 +3,7 @@
 - [Installation](#installation)
 - [API design goals](#api-design-goals)
 - [API](#api)
+  * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, componentDidUpdate, componentWillUpdate />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--componentdidupdate--componentwillupdate----)
     + [Description](#description)
     + [Example](#example)
     + [Types](#types)
@@ -12,10 +13,16 @@
 - [Further examples](#further-examples)
 - [Testing](#testing)
   * [Testing the state machine](#testing-the-state-machine)
+    + [Scenario generation](#scenario-generation)
+    + [Expected output sequences](#expected-output-sequences)
+    + [Comparison](#comparison)
+    + [Results](#results)
   * [Testing the component](#testing-the-component)
-  * [Example](#example-1)
-    + [Testing the machine](#testing-the-machine)
-    + [Testing the component](#testing-the-component-1)
+    + [Test attributes](#test-attributes)
+    + [Mocking effects](#mocking-effects)
+    + [From test input sequence to events](#from-test-input-sequence-to-events)
+    + [Test assertion](#test-assertion)
+  * [Additional considerations](#additional-considerations)
 - [Prior art and useful references](#prior-art-and-useful-references)
 
 # Motivation
@@ -480,13 +487,19 @@ easily adapted, including standard simple event emitters or callbacks.
 command handler.
 - most of the time `preprocessor` will just change the name of the event. You can 
 perfectly if that makes sense, use `preprocessor : x => x` and directly pass on the raw 
-events to the machine as input. That is fine as long as the machine never has to perform an 
-effect (this is one of the machine's contract). In our example, you will notice that we are doing
- `e.persist()`, so our example does not qualify for such a simplification of 
- `preprocessor`. Furthermore, for documentation and design purposes, it makes sense to use 
- any input nomenclature which links to the domain rather than the user interface. As we have 
- seen, what is a click on a button is a search intent to the machine, and results in a search 
- command to the command handler. 
+events to the machine as input. That is fine 
+  - as long as the machine never has to perform an effect (this is one of the machine's contract)
+  . In our example, you will notice that we are doing `e.persist()`, so our example does not 
+  qualify for such a simplification of  `preprocessor`. Furthermore, for documentation and design
+   purposes, it makes sense to use any input nomenclature which links to the domain rather than 
+   the user interface. As we have seen, what is a click on a button is a search intent to the 
+   machine, and results in a search command to the command handler. 
+  - if that machine is only designed for that user interface and not intended to be reused in any
+   other context. This approach as a matter of fact couple the view to the machine. In the case of
+    our image gallery component, we could imagine a reusable parameterizable machine which 
+    implements the behaviour of a generic search input. Having a preprocessor enables to 
+    integrate such machines without a hiccup, while still disappearing out of the picture if not 
+    needed.
 - some machine inputs correspond to the aggregation of several events. For instance, if we had to
  recreate a double click for the `Search` button, we would have to receive two clicks before 
  passing a 
@@ -494,8 +507,8 @@ effect (this is one of the machine's contract). In our example, you will notice 
   (`map`, `filter`, `takeUntil` etc.) allow to aggregate events in a fairly simple manner. Note 
   that we could implement this logic in the state machine itself (our machines are 
   turing-machine-equivalent, they can implement any effect-less computation), but : 1. it is much 
-  better to keep the machine dealing with inputs at a higher level of abstraction, 2. that kind 
-  of event aggregation is **much easier** done with a dedicated library such as `rxjs` 
+  better to keep the machine dealing with inputs at a consistent level of abstraction, 2. that kind 
+  of event aggregation is **much easier** done with a dedicated library such as `rxjs`
 - Likewise, do not hesitate when possible to handle concurrency issues with the event processing 
 library. In our example, we used `switchMap` which only emits the response from the latest 
 request. Doing this in the machine, while possible, would needlessly complicate the design, and 
@@ -504,6 +517,8 @@ lower the level of abstraction at which the machine operates
 any relevant raw event should be associated to an event handler obtained through `trigger`. The 
 `trigger` event emitter is passed as parameter by the `Machine` component to any function props 
 who may need it. For instance the `GalleryApp` component is written as follows :
+- last but not least, you can, if that fits you use case better, have a dummy preprocessor, a 
+dummy event handler and pay no extra cost for our modular architecture 
 
 ```javascript
   render() {
@@ -1175,13 +1190,3 @@ snapshotting features means being married to jest.
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
 - [React automata](https://github.com/MicheleBertoli/react-automata)
 - [react-xstate-js](https://github.com/bradwoods/react-xstate-js)
-
-# Tips
-- the preprocessor is optional. You may also use a pass through preprocessor which simply pass 
-along as is events from the user interface to the machine. This naturally couples the view to the
- machine, but that is not an issue if that machine is only designed for that user interface and 
- not intended to be reused in any other context. In the case of our image gallery component, we 
- could imagine a reusable parameterizable machine which implements the behaviour of a 
- generic search input. Having a preprocessor enables to integrate such machines without a hiccup,
-  while still disappearing out of the picture if not needed.
- 

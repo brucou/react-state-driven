@@ -1,6 +1,10 @@
 // TODO : test actions are run in order..
+- update README with nice drawing 
+  - event seq. => input seq. => fsm => output seq. => assertion seq.
+  - graphs about controller vs. mediator
+  - mocks, category computation <- machine some graph to explain that the command handler effect 
+  handler -> add to the LSC graph!! 
 - make a RADME section on how to update rxjs or eventHandler adapter...
-- update the README to new specs : DOC it
 - actually trigger should also be part of deps, and should be spied on and tested too..
 - test new `effectHandlers` prop, and DOC it
 - analyze or doc. event handlers ALWAys async rendering, sync otherwise...
