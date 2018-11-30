@@ -310,14 +310,13 @@ const showMachine = machine => {
   const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
 
   return React.createElement(Machine, {
-    subjectFactory: Rx,
+    eventHandler: stateTransducerRxAdapter,
     preprocessor: machine.preprocessor,
     fsm: fsm,
     commandHandlers: machine.commandHandlers,
     componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
     componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
   }, null)
-};
 
 // Displays all machines (not very beautifully, but this is just for testing)
 ReactDOM.render(
