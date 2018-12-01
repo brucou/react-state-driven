@@ -163,7 +163,7 @@ For illustration, the user interface starts like this :
 
  The corresponding machine is here :
 
-![machine visualization](https://i.imgur.com/z4hn4Cv.png?1)
+![machine visualization](assets/image%20gallery%20state%20cat.png)
 
 The live example [can be accessed here](https://frontarm.com/demoboard/?id=61be6ab3-9542-4eac-a30c-a6b4fa6ffbfa).
 
@@ -598,7 +598,7 @@ results, photo selection). We also want to test the concurrent behaviour of our 
  also want to cover all the transition of the machines (search error, cancellation, etc. ). 
 
 To that purpose and because we have a relatively small state machine, we thus decide to use a 
-`All-2-transitions` model coverage criteria, with a `gallery` target state. This means we will  
+`All-2-transitions` model coverage criteria, with a `gallery` target state. This means we will 
 examine the application behaviour on the paths for which no edges are repeated more than twice, 
 and the path ends in the `gallery` control state.
 
