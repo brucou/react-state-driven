@@ -917,8 +917,7 @@ In short:
 ```ejs
 Fsm testing : input seq. => fsm => output seq.
 
-Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output 
-seq.)
+Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output seq.)
 ```
 
 

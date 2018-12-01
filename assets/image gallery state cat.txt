@@ -1,0 +1,25 @@
+initial,
+
+start:
+  entry/ render,
+gallery:
+  entry/ render,
+error:
+  entry/ render,
+photo:
+  entry/ render | setPhoto,
+
+loading:
+  entry/ render | search;
+
+initial            => start;
+start => loading : SEARCH;
+loading=> error : SEARCH FAILURE;
+error => loading: SEARCH;
+loading=> gallery : CANCEL SEARCH;
+loading=> gallery : SEARCH SUCCESS
+                    / update items;
+gallery => loading : SEARCH;
+gallery => photo : SELECT PHOTO;
+photo => gallery : EXIT PHOTO;
+
