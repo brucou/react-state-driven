@@ -754,13 +754,15 @@ systems. Here there are only two interfaced systems and two commands : render to
 call to `flickr`.
 
 Render commands are dealt with as a special case : they feature a function 
-which eventually compute a react element to be rendered. We **DO NOT test the react component** at 
+which eventually compute a React element to be rendered. We **DO NOT test the React component** at 
 this level. We simply test against the `props` of that component as they describe entirely the 
 visual appearance of that component (i.e. the component only depends on `props` for its render 
 concern - no state, no context). This makes for a very straight forward testing. The fact that 
 the component does not have state is not fortuitous - we know the control state (and extended state)
  in which we are rendering, so we know the state of the component to render, so we can pass that 
- state as a prop and have a stateless component.
+ state as a prop and have a stateless component. This allows for an implementation worklow similar
+  to that of the designer, who naturally provides different versions of the art board, according 
+  to the anticipated state of the UI (cf. [pure UI](https://rauchg.com/2015/pure-ui)). 
  
  **TODO: go deeper a bit on that cf. https://rauchg.com/2015/pure-ui for an example **
 
