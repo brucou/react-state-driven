@@ -2,8 +2,11 @@ import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
 import { destructureEvent, NO_ACTIONS, NO_INTENT, renderAction, renderGalleryApp, runSearchQuery } from "../helpers";
 import h from "react-hyperscript";
 import Flipping from "flipping";
-import { filter, map, switchMap } from "rxjs/operators";
+import { filter, flatMap, map, shareReplay } from "rxjs/operators";
+import { BehaviorSubject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./components";
+import { getStateTransducerRxAdapter } from "../../src/Machine";
+import { shareReplay } from "rxjs/operators/index";
 
 export const BUTTON_CLICKED = "button_clicked";
 export const KEY_PRESSED = "key_pressed";
@@ -13,10 +16,13 @@ export const INPUT_CHANGED = "input_changed";
 export const KEY_ENTER = `Enter`;
 export const COMMAND_SEARCH = "command_search";
 
+const RxApi = {BehaviorSubject, Observable, merge, filter, flatMap, map, shareReplay};
+
 export const imageGallerySwitchMap = {
   initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
   states: { start: "", loading: "", gallery: "", error: "", photo: "" },
   events: ["SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
+  eventHandler: getStateTransducerRxAdapter(RxApi),
   preprocessor: rawEventSource => rawEventSource.pipe(
     map(ev => {
       const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
@@ -123,76 +129,5 @@ export const imageGallerySwitchMap = {
   inject: new Flipping(),
   componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
   componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();},
-  mocks: {
-    runSearchQuery: function getMockedSearchQuery(s1Failures, s2Failures) {
-      // TODO : this is repeated in image_gallery_specs, so it should be moved in some properties file somewhere
-      const FIRST_SEARCH = "cathether";
-      const SECOND_SEARCH = "cat";
-      let s1 = s1Failures, s2 = s2Failures;
-
-      // The way the input sequence is constructed, any search who fails would fails first before succeeding. So we
-      // know implicitly when the failure occurs : at the beginning. I guess we got lucky. That simplifies the mocking.
-
-      return function mockedSearchQuery(query) {
-        // NOTE : this is coupled to the input event in `test-generation.js`. Those values are later a part of the
-        // API call response
-        return new Promise((resolve, reject) => {
-          if (query === FIRST_SEARCH) {
-            s1--;
-            s1 >= 0
-              ? setTimeout(() => reject(void 0), 2)
-              : setTimeout(() => resolve({
-                items: [
-                  {
-                    link: "https://www.flickr.com/photos/155010203@N06/31741086078/",
-                    media: { m: "https://farm2.staticflickr.com/1928/31741086078_8757b4913d_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/159915559@N02/30547921577/",
-                    media: { m: "https://farm2.staticflickr.com/1978/30547921577_f8cbee76f1_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/155010203@N06/44160499005/",
-                    media: { m: "https://farm2.staticflickr.com/1939/44160499005_7c34c4326d_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/139230693@N02/28991566557/",
-                    media: { m: "https://farm2.staticflickr.com/1833/42224900930_360debd33e_m.jpg" }
-                  }
-                ]
-              }), 2);
-          }
-          else if (query === SECOND_SEARCH) {
-            s2--;
-            s2 >= 0
-              ? setTimeout(() => reject(void 0), 2)
-              : setTimeout(() => resolve({
-                items: [
-                  {
-                    link: "https://www.flickr.com/photos/155010203@N06/31741086079/",
-                    media: { m: "https://farm5.staticflickr.com/4818/45983626382_b3b758282f_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/159915559@N02/30547921579/",
-                    media: { m: "https://farm5.staticflickr.com/4842/31094302557_25a9fcbe3d_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/155010203@N06/44160499009/",
-                    media: { m: "https://farm5.staticflickr.com/4818/31094358517_55544cfcc6_m.jpg" }
-                  },
-                  {
-                    link: "https://www.flickr.com/photos/139230693@N02/28991566559/",
-                    media: { m: "https://farm5.staticflickr.com/4808/45121437725_3d5c8249d7_m.jpg" }
-                  }
-                ]
-              }), 2);
-          }
-          else {
-            reject(new Error(`no mock defined for the query ${query}`));
-          }
-        });
-      };
-    }
-  }
 };
 

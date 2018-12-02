@@ -478,6 +478,28 @@ easily adapted, including standard simple event emitters or callbacks.
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
+## `testMachineComponent(testAPI, testScenario, machineDefinition, machineFactory)`
+### Description
+
+### Types
+In the frame of testing with QUnit, and `react-testing-library`, which are the hypothesis for 
+this function, testAPI is fixed and must be :
+
+```javascript
+import * as rtl  from "react-testing-library";
+
+const testAPI = {
+  test: QUnit.test.bind(QUnit),
+  rtl
+};
+```
+
+For the definition of `MachineDefinition`, `MachineFactory`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/blob/master/types/react-fsm-integration.js)
+
+### Contracts
+
+### Semantics
+
 # Tips and gotchas
 - If the configured state machine library has an initial event, it can be passed using a behavior
  subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
@@ -890,8 +912,6 @@ To enable comparison between actual and expected output, we have to massage some
 We generated 27 tests which all pass (well, eventually).
 
 ## Testing the component
-TODO : I AM HERE!!
-
 The test for the component are conceptually mostly the same than for the state machine, with the 
 addition that the scope of the system under test is larger : it includes the rest of the 
 component's modules. It ensues from this, that provided we have already tested satisfactorily 
@@ -1168,8 +1188,8 @@ Note as we normalize (`normalizeHTML`)the inner HTML from our actual and expecte
   - the debugging experience is much better (all chrome debugger tools are available, faster 
   than node-debug, and the component is displayed on the screen which allows to visually detect 
   defaults)
-  - test execution remains fast : we were able to run our 27 tests with 300+ assertions under 4 
-  seconds.
+  - test execution remains fast : we were able to run our 27 tests with 300+ assertions under 3 
+  seconds on a machine with average specifications. 
   - the `react-testing-library` testing library used works very similarly to `testcafe` a 
   terrific end-to-end testing library, possibly making it easier to promote some unit tests to 
   end-to-end tests 

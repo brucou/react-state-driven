@@ -6,26 +6,14 @@ import prettyFormat from "pretty-format";
 import fetchJsonp from "fetch-jsonp";
 import produce, { nothing } from "immer";
 import h from "react-hyperscript";
-import { filter, flatMap, map, shareReplay } from "rxjs/operators";
-import { BehaviorSubject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./fixtures/components";
 import HTML from "html-parse-stringify";
 import { assoc, forEachObjIndexed, keys, mergeAll, mergeLeft, omit, trim } from "ramda";
+import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
 
 const { parse, stringify } = HTML;
 
 export const noop = () => {};
-export const stateTransducerRxAdapter = {
-  // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
-  subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
-  // NOTE : must be bound, because, reasons
-  merge: merge,
-  create: fn => Observable.create(fn),
-  filter: filter,
-  map: map,
-  flatMap: flatMap,
-  shareReplay: shareReplay
-};
 
 export const ERR_COMMAND_HANDLERS = command => (`Cannot find valid executor for command ${command}`);
 export const NO_ACTIONS = () => ({ outputs: NO_OUTPUT, updates: NO_STATE_UPDATE });
@@ -250,56 +238,22 @@ export function normalizeHTML(str) {
     const { type, name, voidElement, content, attrs } = label;
     if (type !== "component") {
       let style = attrs && attrs.style && trim(attrs.style);
-      if (attrs && 'style' in attrs){
-        if (style[style.length - 1] !== ';') {
-          style = style + ';'
+      if (attrs && "style" in attrs) {
+        if (style[style.length - 1] !== ";") {
+          style = style + ";";
         }
       }
       return {
         type, name, voidElement, content,
         attrs: attrs && style
-          ? assoc('style', style, omit(["data-testid"], attrs))
+          ? assoc("style", style, omit(["data-testid"], attrs))
           : attrs && omit(["data-testid"], attrs)
       };
     }
   };
 
   const result = mapOverTree(lenses, mapFn, strTree);
-  return stringify(result.children)
+  return stringify(result.children);
 }
 
-// Test framework helpers
 
-/** effectHandlers OUT */
-export function mock(effectHandlers, mocks, mockCategory, machineId) {
-  const clonedHandlers = Object.assign({}, effectHandlers);
-  const mock = mocks[machineId][mockCategory];
-  const effects = Object.keys(clonedHandlers);
-  effects.forEach(effect => mock[effect](effectHandlers));
-
-  return effectHandlers;
-}
-
-export function forEachOutput(expectedOutput, fn) {
-  if (!expectedOutput) return void 0;
-
-  expectedOutput.forEach((output, index) => {
-    if (output === NO_OUTPUT) return void 0;
-    fn(output, index);
-  });
-}
-
-export function checkOutputs(testHarness, testCase, imageGallery, container, expectedOutput) {
-  return forEachOutput(expectedOutput, output => {
-    const { then } = testCase;
-    const { command, params } = output;
-    const matcher = then[command];
-
-    if (matcher === undefined) {
-      throw `test case > ${testCase.eventName} :: did not find matcher for command ${command}. Review ${prettyFormat(then)}`;
-    }
-    else {
-      matcher(testHarness, testCase, imageGallery, container, output);
-    }
-  });
-}

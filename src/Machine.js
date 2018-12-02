@@ -1,6 +1,7 @@
 import { Component } from "react";
-import { NO_OUTPUT } from "state-transducer";
+import { INIT_EVENT, NO_OUTPUT } from "state-transducer";
 import { COMMAND_RENDER } from "./properties";
+import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
 
 const identity = x => x;
 
@@ -13,13 +14,6 @@ export function triggerFnFactory(rawEventSource) {
       return rawEventSource.next([rawEventName].concat(args));
     };
   };
-}
-
-function isHandlerObsOperator(handler) {
-  if (!handler || (typeof handler !== "function") || (handler.length !== 1 && handler.length !== 2))
-    throw new Error(`isHandlerObsOperator : command handler has unexpected shape! Should a be a function with 1 or 2 arguments!`);
-
-  return handler.length === 1;
 }
 
 export function commandHandlerFactory(component, trigger, commandHandlers, eventHandler, effectHandlers) {
@@ -129,6 +123,116 @@ export class Machine extends Component {
     const machineComponent = this;
     return machineComponent.state.render || null;
   }
+}
+
+export const getStateTransducerRxAdapter = RxApi => {
+  const { BehaviorSubject, merge, Observable, filter, flatMap, map, shareReplay } = RxApi;
+
+  return {
+    // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
+    subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
+    // NOTE : must be bound, because, reasons
+    merge: merge,
+    create: fn => Observable.create(fn),
+    filter: filter,
+    map: map,
+    flatMap: flatMap,
+    shareReplay: shareReplay
+  };
+};
+
+// Test framework helpers
+function mock(effectHandlers, mocks, inputSequence) {
+  const effects = Object.keys(effectHandlers);
+  return effects.reduce((acc, effect) => {
+    acc[effect] = sinon.spy(mocks[effect](inputSequence));
+    return acc
+  }, {});
+}
+
+function forEachOutput(expectedOutput, fn) {
+  if (!expectedOutput) return void 0;
+
+  expectedOutput.forEach((output, index) => {
+    if (output === NO_OUTPUT) return void 0;
+    fn(output, index);
+  });
+}
+
+function checkOutputs(testHarness, testCase, imageGallery, container, expectedOutput) {
+  return forEachOutput(expectedOutput, output => {
+    const { then } = testCase;
+    const { command, params } = output;
+    const matcher = then[command];
+
+    if (matcher === undefined) {
+      console.error(new Error(`test case > ${testCase.eventName} :: did not find matcher for command ${command}. Please review the 'then' object:`), then);
+      throw `test case > ${testCase.eventName} :: did not find matcher for command ${command}.`;
+    }
+    else {
+      matcher(testHarness, testCase, imageGallery, container, output);
+    }
+  });
+}
+
+export function testMachineComponent(testAPI, testScenario, machineDef, machineFactory) {
+  const { testCases, mocks, when, then, container } = testScenario;
+  const { test, rtl } = testAPI;
+
+  // TODO : add some contracts here : like same size for input sequence and output sequence
+  testCases.forEach(testCase => {
+    test(`${testCase.controlStateSequence.join(" -> ")}`, function exec_test(assert) {
+      const inputSequence = testCase.inputSequence;
+      // NOTE : by construction of the machine, length of input and output sequence are the same!!
+      const expectedFsmOutputSequence = testCase.outputSequence;
+      const expectedOutputSequence = expectedFsmOutputSequence;
+      const mockedEffectHandlers = mock(machineDef.effectHandlers, mocks, inputSequence);
+      const imageGallery = machineFactory(machineDef, mockedEffectHandlers);
+      const done = assert.async(inputSequence.length);
+
+      inputSequence.reduce((acc, input, index) => {
+        const eventName = Object.keys(input)[0];
+        const eventData = input[eventName];
+        const testHarness = { assert, rtl };
+        const testCase = {
+          eventName,
+          eventData,
+          expectedOutput: expectedOutputSequence[index],
+          inputSequence,
+          expectedOutputSequence,
+          mockedEffectHandlers,
+          when,
+          then,
+          mocks
+        };
+
+        return acc
+          .then(() => {
+            if (!when[eventName]) throw `Cannot find what to do to simulate event ${eventName}!`;
+            if (typeof when[eventName] !== "function") {
+              console.error(new Error(`Simulation for event ${eventName} must be defined through a function! Review received ::`), when[eventName]);
+              throw `Simulation for event ${eventName} must be defined through a function!`;
+            }
+
+            const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
+            if (simulateInput instanceof Promise) {
+              return simulateInput
+                .then(() => checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]));
+            }
+            else {
+              checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]);
+            }
+          })
+          .then(done)
+          .catch((e) => {
+            console.log(`Error`, e);
+            assert.ok(false, e);
+            done(e);
+          })
+          ;
+      }, Promise.resolve());
+    });
+  });
 }
 
 function assertPropsContract(props) {

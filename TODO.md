@@ -1,16 +1,13 @@
 // TODO : test actions are run in order..
 - have the demo work again in react-app-simple? bump the version
-- architect better the (only) test available. Seems a mess with fixturs, helpers all over the place
+- DOC the new test helper
+- architect better the (only) test available. Seems a mess with fixtures, helpers all over the place
 - update README with nice drawing 
   - event seq. => input seq. => fsm => output seq. => assertion seq.
   - graphs about controller vs. mediator
   - mocks, category computation <- machine some graph to explain that the command handler effect 
   handler -> add to the LSC graph!! 
-- make a RADME section on how to update rxjs or eventHandler adapter...
-- actually trigger should also be part of deps, and should be spied on and tested too..
-- test new `effectHandlers` prop, and DOC it
-- analyze or doc. event handlers ALWAys async rendering, sync otherwise...
-  - https://www.bennadel.com/blog/2893-setstate-state-mutation-operation-may-be-synchronous-in-reactjs.htm
+- make a README section on how to update rxjs or eventHandler adapter...
 - look at that plan-oriented-testing (recoup with the improvement in the testing generation)
 - explain testing
 - explain the resulting architecture
@@ -29,8 +26,6 @@
     - implement nice examples 
 - could add a machine.stop in the interface, that we would run in the onComplete, or on 
     ErrorHandler (no need for xstate integration but maybe for others)
-- add it to https://github.com/GantMan/ReactStateMuseum : marketing
-  - then do a sandbox with it from https://github.com/GantMan/ReactStateMuseum, cf. purestore
 - add debugging support..., an overlay tipicamente would be good 
 
 
