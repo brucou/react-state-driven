@@ -2,7 +2,7 @@
   "repository": "git@github.com:brucou/react-state-driven.git",
   "name": "react-state-driven",
   "author": "brucou",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "license": "MIT",
   "description": "A state machine abstraction for React",
   "main": "dist/react-state-driven.js",
@@ -69,6 +69,6 @@
   },
   "peerDependencies": {
     "react": ">=16.3",
-    "sinon":"^7.1.1"
+    "sinon": "^7.1.1"
   }
 }
