@@ -9,6 +9,7 @@ import h from "react-hyperscript";
 import { GalleryApp } from "./fixtures/components";
 import HTML from "html-parse-stringify";
 import { assoc, forEachObjIndexed, keys, mergeAll, mergeLeft, omit, trim } from "ramda";
+import { COMMAND_RENDER } from "../src";
 
 const { parse, stringify } = HTML;
 
@@ -17,7 +18,7 @@ export const noop = () => {};
 export const ERR_COMMAND_HANDLERS = command => (`Cannot find valid executor for command ${command}`);
 export const NO_ACTIONS = () => ({ outputs: NO_OUTPUT, updates: NO_STATE_UPDATE });
 export const NO_INTENT = null;
-export const COMMAND_RENDER = "render";
+export const COMMAND_SEARCH = "command_search";
 
 function isFunction(obj) {
   return typeof obj === "function";
