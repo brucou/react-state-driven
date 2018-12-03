@@ -1,6 +1,5 @@
 // TODO : test actions are run in order..
 - have the demo work again in react-app-simple? bump the version
-- DOC the new test helper
 - architect better the (only) test available. Seems a mess with fixtures, helpers all over the place
 - update README with nice drawing 
   - event seq. => input seq. => fsm => output seq. => assertion seq.
