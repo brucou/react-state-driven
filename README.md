@@ -103,6 +103,7 @@ There are more benefits but this is not the place to go about them. Cf:
 
 # Installation
 > `react`  is a peer dependency.
+> `sinon` should be imported if one wants to use the testing API
 
 ```sh
 npm install react-state-driven
@@ -478,8 +479,48 @@ easily adapted, including standard simple event emitters or callbacks.
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
-## `testMachineComponent(testAPI, testScenario, machineDefinition, machineFactory)`
+## `testMachineComponent(testAPI, testScenario, machineDefinition)`
 ### Description
+The `testMachineComponent` function runs a set of test cases on a React `<Machine/>` component 
+which wraps around an underlying state machine defining its behaviour. The tests are run entirely
+ in the browser. The test framework is QUnit for the test runs, and `react-testing-library` for 
+ handling the React component.
+
+A test case is an input sequence, and a matching expected output sequence. The input sequence is 
+a ordered set of inputs for the underlying state machine, and the matching output sequence is the
+ outputs of the machine corresponding to the input sequence. Because any underlying state machine
+  will always produce an output for any given input, input sequence and output sequence have the 
+  same length, and given an index `i`, the output at index `i` is the output of the machine for 
+  the input sequence at index `i`. Lastly, we remind that the state machine outputs **array of 
+  values** for each input it receives.
+
+This implicitly means that tests for the underlying state machine are reused for the `<Machine/>` 
+component, which in turn means that the underlying state machine has to be tested first, and then
+ the React component.
+
+Because input sequences and output sequences are with respect to the underlying state machine, they
+ have to be converted to :
+
+- event sequences which represent/simulate the actions of a user on the user interface, or the 
+ events received by the React component by interfaced systems
+- assertion sequences which check that the simulated event has the expected effect.
+
+Because we are unit-testing, we do not want to perform effects on the interfaced 
+systems (other than the user acting on the user interface), and as a result, a the 
+`testMachineComponent` function incorporates a mocking mechanism.
+
+Finally, we run the test in the browser, with actual display of the component in the browser in 
+order to facilitate debugging activities. As a result, it is necessary to provide an anchoring 
+DOM element to display the component.  
+
+In short, the testing methodology can be summarized as follows:
+
+```ejs
+Fsm testing : input seq. => fsm (black box) => output seq.
+
+Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output seq.)
+```
+
 
 ### Types
 In the frame of testing with QUnit, and `react-testing-library`, which are the hypothesis for 
@@ -494,11 +535,30 @@ const testAPI = {
 };
 ```
 
-For the definition of `MachineDefinition`, `MachineFactory`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/blob/master/types/react-fsm-integration.js)
+For the definition of `MachineDefinition`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/blob/master/types/react-fsm-integration.js)
 
 ### Contracts
+- input sequence and output sequence have same length
+- output sequence = state machine run (input sequence)
+- type contracts
 
 ### Semantics
+For each test case/input sequence :
+
+- the fsm under test is created with mocked effect handlers
+  - using the `mockedEffectHandlers`, `mockedMachineFactory`, `machineDef`, `mocks` properties 
+  passed with the parameters
+- for each input in the input sequence :
+  - the corresponding event is computed and run
+    - as deduced from the `when` property of `testScenario`
+    - the `when` function is passed all the data necessary for it to perform its function, cf. types
+  - the corresponding assertion is computed and chained to the previous event simulation
+    - as deduced from the `then` property of `testScenario`
+    - the `then` function is passed all the data necessary for it to perform its function, cf. types
+    - event simulations returning promises are chained seamlessly
+  - errors are caught and logged both in the console and in the QUnit reporter (tests are not interrupted)
+      
+After each test case, the DOM anchor is emptied (`React.render(null, ...)`).
 
 # Tips and gotchas
 - If the configured state machine library has an initial event, it can be passed using a behavior
@@ -786,8 +846,6 @@ the component does not have state is not fortuitous - we know the control state 
   to that of the designer, who naturally provides different versions of the art board, according 
   to the anticipated state of the UI (cf. [pure UI](https://rauchg.com/2015/pure-ui)). 
  
- **TODO: go deeper a bit on that cf. https://rauchg.com/2015/pure-ui for an example **
-
 Note that the React component still have to be tested, but that can be done separately, by any of
  the usual React specific testing technique ([storybook](https://storybook.js.org/) is a nice way
   to do that, specially with stateless components). We have an architecture made of decoupled 
@@ -933,15 +991,6 @@ Testing the component involves :
 - mocking effects
 - mapping test machine's input sequence to component's test event sequence (click, submit, etc.)
 - For each event, determine the timing when to execute the test assertion and execute the test assertion
-
-In short:
-
-```ejs
-Fsm testing : input seq. => fsm => output seq.
-
-Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output seq.)
-```
-
 
 ### Test attributes
 Test attributes give a more robust testing experience, by further decoupling the testing process 

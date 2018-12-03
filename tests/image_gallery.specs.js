@@ -8,7 +8,6 @@ import { applyJSONpatch, noop, normalizeHTML } from "./helpers";
 import prettyFormat from "pretty-format";
 import { imageGallerySwitchMap } from "./fixtures/machines";
 import { CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH, SEARCH_ERROR, SEARCH_INPUT } from "./fixtures/test-ids";
-import HTML from "html-parse-stringify";
 import { COMMAND_SEARCH } from "../src/properties";
 import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
 import { testCases } from "./assets/test-generation";
@@ -16,7 +15,6 @@ import { testMachineComponent } from "../src/Machine";
 
 // NOTE : this is coupled to index.html
 const container = document.getElementById("app");
-const { parse, stringify } = HTML;
 
 QUnit.module("Testing image gallery component", {
   // Restore the default sandbox cf. https://sinonjs.org/releases/v7.1.1/general-setup/
@@ -67,13 +65,13 @@ const when = {
 
     // NOTE: System events are sent by mocked effect handlers (here the API call). On receiving the search response, the
     // rendering happens asynchronously, so we need to wait a little to get the updated DOM. It is also possible
-    // that the DOM is not updated (because the new DOM is exactly as the old DOM...). The less error-prone way is
-    // to just wait `n > 1` tick (that should be enough for React to render) and to read the DOM then. No events
-    // will be received during those `n` ticks to be sure that React had the time to update the DOM.
-    // Those time-dependencies are tricky in theory. However, in practice most of the time, heuristics like the one
-    // we just described suffice.
-    // Note that because we anyways chain assertions with promises, we naturally wait a tick between assertions, so
-    // we could have done away with the `waitForElement`. For clarity purposes, we however let it be visible.
+    // that the DOM is not updated (because the new DOM is exactly as the old DOM...). So we can't really use
+    // predictably a set amount of time to wait. The best robust way to know when to run this assertion is to
+    // observe the appearance of new elements, which is what we do here. Still...
+    // we have to be careful about time dependencies. This will wait for new DOM elements appearing which satisfy
+    // the condition. STARTING FROM the moment of the wait call. So the wait call must happen before the screen is
+    // updated, otherwise it waits forever (i.e. the duration of the timeout).  This in turns means the related
+    // input simulation must not wait too long before passing the relay to the assertion section...
     return waitForElement(() => getByTestId(container, PHOTO))
     // !! very important for the edge case when the search success is the last to execute.
     // Because of react async rendering, the DOM is not updated yet, that or some other reason anyways
@@ -221,9 +219,10 @@ const mocks = {
 };
 const testScenario = { testCases: testCases, mocks, when, then, container };
 
-function machineFactory(machine, mockedEffectHandlers) {
+function mockedMachineFactory(machine, mockedEffectHandlers) {
   const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
   const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
+
   return React.createElement(Machine, {
     eventHandler: machine.eventHandler,
     preprocessor: machine.preprocessor,
@@ -235,5 +234,5 @@ function machineFactory(machine, mockedEffectHandlers) {
   }, null);
 }
 
-testMachineComponent(testAPI, testScenario, imageGallerySwitchMap, machineFactory);
+testMachineComponent(testAPI, testScenario, imageGallerySwitchMap, mockedMachineFactory);
 

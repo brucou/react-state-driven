@@ -175,8 +175,8 @@ function checkOutputs(testHarness, testCase, imageGallery, container, expectedOu
   });
 }
 
-export function testMachineComponent(testAPI, testScenario, machineDef, machineFactory) {
-  const { testCases, mocks, when, then, container } = testScenario;
+export function testMachineComponent(testAPI, testScenario, machineDef) {
+  const { testCases, mocks, when, then, container, mockedMachineFactory } = testScenario;
   const { test, rtl } = testAPI;
 
   // TODO : add some contracts here : like same size for input sequence and output sequence
@@ -187,7 +187,7 @@ export function testMachineComponent(testAPI, testScenario, machineDef, machineF
       const expectedFsmOutputSequence = testCase.outputSequence;
       const expectedOutputSequence = expectedFsmOutputSequence;
       const mockedEffectHandlers = mock(machineDef.effectHandlers, mocks, inputSequence);
-      const imageGallery = machineFactory(machineDef, mockedEffectHandlers);
+      const mockedFsm = mockedMachineFactory(machineDef, mockedEffectHandlers);
       const done = assert.async(inputSequence.length);
 
       inputSequence.reduce((acc, input, index) => {
@@ -214,13 +214,13 @@ export function testMachineComponent(testAPI, testScenario, machineDef, machineF
               throw `Simulation for event ${eventName} must be defined through a function!`;
             }
 
-            const simulateInput = when[eventName](testHarness, testCase, imageGallery, container);
+            const simulateInput = when[eventName](testHarness, testCase, mockedFsm, container);
             if (simulateInput instanceof Promise) {
               return simulateInput
-                .then(() => checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]));
+                .then(() => checkOutputs(testHarness, testCase, mockedFsm, container, expectedOutputSequence[index]));
             }
             else {
-              checkOutputs(testHarness, testCase, imageGallery, container, expectedOutputSequence[index]);
+              checkOutputs(testHarness, testCase, mockedFsm, container, expectedOutputSequence[index]);
             }
           })
           .then(done)

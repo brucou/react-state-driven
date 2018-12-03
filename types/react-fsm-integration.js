@@ -118,7 +118,7 @@
  * @typedef {String} EffectName
  */
 /**
- * @typedef {function (FSM_Def, MockedEffectHandlers) : FSM} MachineFactory creates the instance of a machine with
+ * @typedef {function (FSM_Def, MockedEffectHandlers) : FSM} MockedMachineFactory creates the instance of a machine with
  * the given specifications, replacing its effect handlers by the given mocked effect handlers
  */
 /**
@@ -134,6 +134,7 @@
  * @property {When} when
  * @property {Then} then
  * @property {Node} container
+ * @property {MockedMachineFactory} mockedMachineFactory
  */
 /**
  * @typedef {{inputSequence: InputSequence, outputSequence:OutputSequence, controlStateSequence:ControlStateSequence}} TestCase
