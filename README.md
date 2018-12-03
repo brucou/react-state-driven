@@ -687,9 +687,13 @@ and the path ends in the `gallery` control state.
 
 To use our test sequences generator, we need to indicate, for each possible control state, 
 transition from that control state, value of the machine's extended state: whether it is possible
- to generate an input which triggers that transition, and if possible, suggest such an input. In 
+ to generate an input which triggers that transition, and if possible, suggests such an input. In 
  the present case, we keep track of the queries performed and pending, so that we do not repeat 
  the same search twice, except if the search failed.
+
+Lastly, the configuration for our test generation has the same shape as the state machine under 
+test. A good practice is to copy paste the configuration of the machine under test and add the 
+`gen` fields which describe the computation of test inputs. 
 
 With this, we have all the information required to use the test generator.  
 
