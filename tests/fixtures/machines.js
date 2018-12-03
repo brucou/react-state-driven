@@ -2,11 +2,10 @@ import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
 import { destructureEvent, NO_ACTIONS, NO_INTENT, renderAction, renderGalleryApp, runSearchQuery } from "../helpers";
 import h from "react-hyperscript";
 import Flipping from "flipping";
-import { filter, flatMap, map, shareReplay } from "rxjs/operators";
+import { filter, flatMap, map, shareReplay, switchMap } from "rxjs/operators";
 import { BehaviorSubject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./components";
 import { getStateTransducerRxAdapter } from "../../src/Machine";
-import { shareReplay } from "rxjs/operators/index";
 
 export const BUTTON_CLICKED = "button_clicked";
 export const KEY_PRESSED = "key_pressed";

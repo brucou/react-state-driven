@@ -217,7 +217,7 @@ const mocks = {
 
   }
 };
-const testScenario = { testCases: testCases, mocks, when, then, container };
+const testScenario = { testCases: testCases, mocks, when, then, container,mockedMachineFactory };
 
 function mockedMachineFactory(machine, mockedEffectHandlers) {
   const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
@@ -234,5 +234,5 @@ function mockedMachineFactory(machine, mockedEffectHandlers) {
   }, null);
 }
 
-testMachineComponent(testAPI, testScenario, imageGallerySwitchMap, mockedMachineFactory);
+testMachineComponent(testAPI, testScenario, imageGallerySwitchMap);
 
