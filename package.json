@@ -13,7 +13,6 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "rollup -c",
     "prepublish": "npm run build",
     "start": "webpack-dev-server --open",
