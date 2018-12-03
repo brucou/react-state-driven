@@ -841,20 +841,20 @@ systems. Here there are only two interfaced systems and two commands : render to
 call to `flickr`.
 
 Render commands are dealt with as a special case : they feature a function 
-which eventually compute a React element to be rendered. We **DO NOT test the React component** at 
-this level. We simply test against the `props` of that component as they describe entirely the 
-visual appearance of that component (i.e. the component only depends on `props` for its render 
-concern - no state, no context). This makes for a very straight forward testing. The fact that 
+which eventually computes a React element to be rendered. We **DO NOT test the React component** 
+wrapping the element at this level. We simply test against the `props` of that component as they 
+describe entirely the visual appearance of that component (i.e. the component only depends on 
+`props` for its render concern - no state, no context). This makes for a very straight forward testing. The fact that 
 the component does not have state is not fortuitous - we know the control state (and extended state)
- in which we are rendering, so we know the state of the component to render, so we can pass that 
- state as a prop and have a stateless component. This allows for an implementation worklow similar
-  to that of the designer, who naturally provides different versions of the art board, according 
-  to the anticipated state of the UI (cf. [pure UI](https://rauchg.com/2015/pure-ui)). 
+ in which we are rendering, so we can pass the useful portions of that state as props and have a 
+ stateless component. This allows for an  implementation worklow similar to that of the designer,
+  who naturally provides different versions of the art board, according to the anticipated states of the UI (cf. [pure UI](https://rauchg.com/2015/pure-ui)). 
  
-Note that the React component still have to be tested, but that can be done separately, by any of
- the usual React specific testing technique ([storybook](https://storybook.js.org/) is a nice way
-  to do that, specially with stateless components). We have an architecture made of decoupled 
-  parts, and we can test each part separately **with the best tool available to that purpose**.
+Note that the React component still has to be tested, but that can be done separately, by any of
+ the usual React specific testing techniques ([storybook](https://storybook.js.org/) is a nice way
+  to do that, specially with stateless components). You can also separately use `jest` and its 
+  snapshot feature, if that is deemed useful. The idea as always is to use **the best tool 
+  available to each purpose**.
 
 ```javascript
   const expectedOutputSequences = inputSequences
