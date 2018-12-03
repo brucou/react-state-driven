@@ -589,7 +589,6 @@ export const getStateTransducerRxAdapter = RxApi => {
 
 ```
 
-
 # Tips and gotchas
 - If the configured state machine library has an initial event, it can be passed using a behavior
  subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
