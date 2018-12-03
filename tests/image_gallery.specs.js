@@ -9,7 +9,7 @@ import prettyFormat from "pretty-format";
 import { imageGallerySwitchMap } from "./fixtures/machines";
 import { CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH, SEARCH_ERROR, SEARCH_INPUT } from "./fixtures/test-ids";
 import { COMMAND_SEARCH } from "../src/properties";
-import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
+import sinon from "sinon";
 import { testCases } from "./assets/test-generation";
 import { testMachineComponent } from "../src/Machine";
 

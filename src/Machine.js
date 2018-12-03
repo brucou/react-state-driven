@@ -1,7 +1,7 @@
 import { Component } from "react";
 import { INIT_EVENT, NO_OUTPUT } from "state-transducer";
 import { COMMAND_RENDER } from "./properties";
-import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
+import sinon from "sinon";
 
 const identity = x => x;
 

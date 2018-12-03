@@ -9,7 +9,6 @@ import h from "react-hyperscript";
 import { GalleryApp } from "./fixtures/components";
 import HTML from "html-parse-stringify";
 import { assoc, forEachObjIndexed, keys, mergeAll, mergeLeft, omit, trim } from "ramda";
-import sinon from "../node_modules/sinon/pkg/sinon-esm.js";
 
 const { parse, stringify } = HTML;
 
