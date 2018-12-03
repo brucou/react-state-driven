@@ -565,6 +565,31 @@ For each test case/input sequence :
       
 After each test case, the DOM anchor is emptied (`React.render(null, ...)`).
 
+## getStateTransducerRxAdapter(RxApi)
+
+```javascript
+import { filter, flatMap, map, shareReplay, switchMap } from "rxjs/operators";
+import { BehaviorSubject, merge, Observable } from "rxjs";
+
+export const getStateTransducerRxAdapter = RxApi => {
+  const { BehaviorSubject, merge, Observable, filter, flatMap, map, shareReplay } = RxApi;
+
+  return {
+    // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
+    subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
+    // NOTE : must be bound, because, reasons
+    merge: merge,
+    create: fn => Observable.create(fn),
+    filter: filter,
+    map: map,
+    flatMap: flatMap,
+    shareReplay: shareReplay
+  };
+};
+
+```
+
+
 # Tips and gotchas
 - If the configured state machine library has an initial event, it can be passed using a behavior
  subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
