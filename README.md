@@ -1311,7 +1311,7 @@ Note as we normalize (`normalizeHTML`)the inner HTML from our actual and expecte
   However, remember that the expected HTML was generated already for us when we ran the test cases 
   for the state machine. We then never had to manually copy and paste HTML strings from anywhere, 
   which would be a deal-breaker, considering we run hundreds of tests for a single fsm.
-    
+
 
 ## Additional considerations
 - we chose to perform our tests completely in the browser
@@ -1337,8 +1337,8 @@ generated input sequences to test against the component. That seems very attract
   - if a component test fails, you then will have to decide whether it was the state 
   machine which was wrongly specified or the other modules (preprocessor, command handler, effect
    handler) which are failing. You may quickly loose the productivity saving due to that 
-   uncertainty and the related investigation time  
-- we use Qunit and `react-testing-library`. However, because we used no special or esoteric 
+   uncertainty and the related investigation time
+- we use QUnit and `react-testing-library`. However, because we used no special or esoteric 
 feature of our testing framework, it is easy to use any framework of our choice, and suitable 
 replacement for the browser. The reverse would not be true : relying on jest mocking and 
 snapshotting features means being married to jest.
