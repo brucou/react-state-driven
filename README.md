@@ -107,7 +107,7 @@ There are more benefits but this is not the place to go about them. Cf:
 with the mediator)    
 [^2]: In relation with state machines, it is the same to say that 
       an output depends exclusively on past and present inputs and that an output exclusively depends 
-      on current state, and present input.
+      on current state, and present input.    
 {^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
 
