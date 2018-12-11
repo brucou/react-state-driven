@@ -103,12 +103,12 @@ There are more benefits but this is not the place to go about them. Cf:
 - [Pure UI](https://rauchg.com/2015/pure-ui)
 - [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
 
-{^3]: Command handlers can only perform effects internally (for instance async. communication 
+[^3]: Command handlers can only perform effects internally (for instance async. communication 
 with the mediator)    
 [^2]: In relation with state machines, it is the same to say that 
       an output depends exclusively on past and present inputs and that an output exclusively depends 
       on current state, and present input.    
-{^1]: Another term used elsewhere is *deterministic* functions, but we 
+[^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
 
 # Installation
