@@ -9,18 +9,21 @@ User interface -> +Mediator : button click
 Mediator -> +Preprocessor : button click
 Preprocessor -> -Mediator : {Search : 'cat'}
 Mediator -> +FSM : {SEARCH : 'cat'}
-FSM -> -Mediator : [API call, render]
-Mediator -> +Command handler : fetch https://api.flickr.com/... 
-Command handler -> +External systems : API call: https://api.flickr.com/... 
-External systems -> -Command handler :
-Command handler -> -Mediator : 
+FSM -> -Mediator : [ query 'cat' images, render ]
+Mediator -> +Command handler : query 'cat' images
+Command handler -> +Effect handler : query flickr
+Effect handler -> +External systems : fetch https://api.flickr.com/...
+External systems -> -Effect handler :
+Effect handler -> -Command handler :
+Command handler -> -Mediator :
 Mediator -> -User interface : render
-User interface ->  User : 
+User interface ->  User :
 note right of External systems : successful search
-External systems -> Command handler : API response
-Command handler -> +Mediator : API response
-Mediator -> +FSM : {SEARCH_SUCCESS : {items: ...}}
+External systems -> Effect handler : API response
+Effect handler -> Command handler : query results
+Command handler -> +Mediator : queried 'cat' images
+Mediator -> +FSM : {SEARCH_SUCCESS : { items: ... }}
 FSM -> -Mediator : [render]
 note right of User interface : Application displays cat images
 Mediator -> -User interface : render
-User interface ->  User : 
+User interface ->  User :

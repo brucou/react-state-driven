@@ -63,32 +63,35 @@ In our proposed architecture, the same scenario would become :
 ![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
 
 In that architecture, the application is refactored into a mediator, a preprocessor, a state 
-machine, and a command handler. The application is thus split into smaller parts which address 
-specific concerns :
+machine, a command handler, and an effect handler. The application is thus split into smaller parts 
+which address specific concerns :
 - the preprocessor translates user interface events into inputs for the state machine
 - the state machine computes the commands to execute as a result of its present and past inputs, 
 or, what is equivalent, its present input and current state 
-- the command handler interprets and executes incoming commands
+- the command handler interprets and executes incoming commands, delegating the execution of 
+effects to the effect handler when necessary
 - the mediator coordinates the user interface, the preprocessor, the state machine and the command 
 handler
 
-Apart from the separation of concerns we have achieved, we also have successfully reduced 
-the incidental complexity of our implementation :
+While the architecture may appear more complex (isolating concerns means more parts), we have in 
+fact successfully increased the testability of our implementation :
 - the mediator algorithm is the same independently of the pieces it coordinates. This means it 
-can be written and tested once, then reused at will. This is our `<Machine />` component. This is
- glue code that you do not have to write anymore.
-- command handlers are pretty generic pieces of code. An example could be code to fetch a 
-resource. That code is written and tested once, and then reused for any resource. Additionally, 
-only the command handler can perform effects on the external systems, which helps tracing and 
-debugging. 
+can be written and tested once, then reused at will. This is our `<Machine />` component. **This is
+ glue code that you do not have to write and test anymore**
+- effect handlers are pretty generic pieces of code. An example could be code to fetch a 
+resource. That code is written and tested once (and comes generally tested out of the box), and 
+then reused for any resource. Additionally, only the effect handlers can perform effects on the 
+external systems, which helps testing, tracing and debugging[^3]
+- effect handlers, being isolated in their own module, are easy to mock, without resorting to 
+a complex machinery
 - the state machine is a function which **performs no effects**, and whose output exclusively depends 
 on current state, and present input[^2]. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
 exhibit the same property[^1]. The causality property means state machines are a breeze
  to reason about and test (well, not as much as pure functions, but infinitely better than 
- effectful functions).
+ effectful functions)
 - only the preprocessor and mediator can perform effects on the user interface, which helps 
-tracing and debugging. 
+testing, tracing and debugging 
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
  instance, we use in our implementation `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
@@ -100,6 +103,8 @@ There are more benefits but this is not the place to go about them. Cf:
 - [Pure UI](https://rauchg.com/2015/pure-ui)
 - [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
 
+{^3]: Command handlers can only perform effects internally (for instance async. communication 
+with the mediator)
 {^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
 [^2]: In relation with state machines, it is the same to say that 
@@ -437,6 +442,7 @@ const stateTransducerRxAdapter = {
 ```
 
 ### Contracts
+- command handlers delegate **all effects on external systems** through the effect handler module
 - the `[COMMAND_RENDER]` command is reserved and must not be used in the command handlers' 
 specifications  
 - types contracts
