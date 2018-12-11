@@ -104,7 +104,7 @@ There are more benefits but this is not the place to go about them. Cf:
 - [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
 
 {^3]: Command handlers can only perform effects internally (for instance async. communication 
-with the mediator)
+with the mediator)    
 {^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
 [^2]: In relation with state machines, it is the same to say that 
