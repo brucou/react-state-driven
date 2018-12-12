@@ -39,6 +39,7 @@ QUnit.module("Testing image gallery component", {
 
 // Test config
 const testAPI = {
+  sinonAPI: sinon,
   test: QUnit.test.bind(QUnit),
   rtl: { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText }
 };
@@ -224,6 +225,7 @@ function mockedMachineFactory(machine, mockedEffectHandlers) {
   const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
 
   return React.createElement(Machine, {
+    options : machine.options,
     eventHandler: machine.eventHandler,
     preprocessor: machine.preprocessor,
     fsm: fsm,

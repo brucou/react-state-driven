@@ -2,8 +2,8 @@ import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
 import { destructureEvent, NO_ACTIONS, NO_INTENT, renderAction, renderGalleryApp, runSearchQuery } from "../helpers";
 import h from "react-hyperscript";
 import Flipping from "flipping";
-import { filter, flatMap, map, shareReplay, switchMap } from "rxjs/operators";
-import { BehaviorSubject, merge, Observable } from "rxjs";
+import { filter, flatMap, concatMap, map, shareReplay, switchMap, startWith } from "rxjs/operators";
+import { Subject, merge, Observable } from "rxjs";
 import { GalleryApp } from "./components";
 import { getStateTransducerRxAdapter } from "../../src/Machine";
 
@@ -15,9 +15,10 @@ export const INPUT_CHANGED = "input_changed";
 export const KEY_ENTER = `Enter`;
 export const COMMAND_SEARCH = "command_search";
 
-const RxApi = {BehaviorSubject, Observable, merge, filter, flatMap, map, shareReplay};
+const RxApi = {Subject, Observable, merge, filter, flatMap, concatMap, map, startWith, shareReplay};
 
 export const imageGallerySwitchMap = {
+  options : {debug :false, initialEvent : {[INIT_EVENT] : void 0}},
   initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
   states: { start: "", loading: "", gallery: "", error: "", photo: "" },
   events: ["SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],

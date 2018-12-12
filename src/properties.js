@@ -13,3 +13,13 @@ export const NO_ACTIONS = () => ({ outputs: NO_OUTPUT, updates: NO_STATE_UPDATE 
 export const KEY_ENTER = `Enter`;
 export const NO_INTENT = null;
 export const COMMAND_SEARCH = 'command_search';
+
+export const PREPROCESSOR_INPUT_STAGE = 'PREPROCESSOR_INPUT_STAGE ';
+export const FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';
+export const GLOBAL_COMMAND_HANDLER_INPUT_STAGE = 'GLOBAL_COMMAND_HANDLER_INPUT_STAGE';
+export const COMMAND_HANDLER_INPUT_STAGE = 'COMMAND_HANDLER_INPUT_STAGE';
+export const COMMAND_HANDLER_OUTPUT_STAGE = 'COMMAND_HANDLER_OUTPUT_STAGE';
+export const ERROR_STAGE = 'ERROR_STAGE';
+
+export const IFRAME_CONNECT_TIMEOUT = 1000;
+export const IFRAME_DEBUG_URL = '???';

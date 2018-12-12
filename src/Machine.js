@@ -1,31 +1,43 @@
 import { Component } from "react";
-import { INIT_EVENT, NO_OUTPUT } from "state-transducer";
-import { COMMAND_RENDER } from "./properties";
-import sinon from "sinon";
+import { NO_OUTPUT } from "state-transducer";
+import {
+  COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_RENDER, ERROR_STAGE, FSM_INPUT_STAGE,
+  GLOBAL_COMMAND_HANDLER_INPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL, PREPROCESSOR_INPUT_STAGE
+} from "./properties";
+import Penpal from "penpal";
 
 const identity = x => x;
 
-export function triggerFnFactory(rawEventSource) {
+export function triggerFnFactory(rawEventSource, debugEmitter) {
   return rawEventName => {
     // DOC : by convention, [rawEventName, rawEventData, ref (optional), ...anything else]
     // DOC : rawEventData is generally the raw event passed by the event handler
     // DOC : `ref` here is :: React.ElementRef and is generally used to pass `ref`s for uncontrolled component
     return function eventHandler(...args) {
-      return rawEventSource.next([rawEventName].concat(args));
+      const rawEventStruct = [rawEventName].concat(args);
+      // DOC : possibly non-json compatible data might not cross iframe boundary
+      debugEmitter && debugEmitter.next({ stage: PREPROCESSOR_INPUT_STAGE, value: rawEventStruct });
+
+      return rawEventSource.next(rawEventStruct);
     };
   };
 }
 
-export function commandHandlerFactory(component, trigger, commandHandlers, eventHandler, effectHandlers) {
-  const { create, merge, filter, map, flatMap, shareReplay } = eventHandler;
+export function commandHandlerFactory(component, trigger, eventHandler, commandHandlers, effectHandlers, debugEmitter) {
+  const { create, merge, filter, map, flatMap, concatMap, shareReplay } = eventHandler;
 
   return function globalCommandHandler(actions$) {
     const nonEmptyActions$ = actions$.pipe(
+      // Debug emission, simulation `tap` with `map` to reduce event handler API footprint
+      map(actions => {
+        debugEmitter && debugEmitter.next({ stage: GLOBAL_COMMAND_HANDLER_INPUT_STAGE, value: actions });
+        return actions;
+      }),
       filter(actions => actions !== NO_OUTPUT),
       map(actions => actions.filter(action => action !== NO_OUTPUT)),
       // NOTE : trick to flatten the array of actions into the stream
       // while still keeping order of execution of actions
-      flatMap(actions => create(o => {
+      concatMap(actions => create(o => {
         actions.forEach(action => o.next({ ...action, trigger }));
         o.complete();
       })),
@@ -36,7 +48,13 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
     // Compute the handlers for each command configured
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(trigger, params) {
-        component.setState({ render: params(trigger) });
+        const newState = { render: params(trigger) };
+        debugEmitter && debugEmitter.next({
+          stage: COMMAND_HANDLER_INPUT_STAGE,
+          value: { command: COMMAND_RENDER, params: newState.render }
+        });
+
+        component.setState(newState);
       }
     });
 
@@ -44,7 +62,15 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
     const actionsHandlersArray = registeredCommands.map(command => {
       const commandHandler = commandHandlersWithRenderHandler[command];
       const commandParams$ = nonEmptyActions$.pipe(
-        filter(action => action.command === command)
+        filter(action => action.command === command),
+        map(action => {
+          debugEmitter && debugEmitter.next({
+            stage: COMMAND_HANDLER_INPUT_STAGE,
+            value: action
+          });
+
+          return action;
+        })
       );
 
       if (command === COMMAND_RENDER) {
@@ -53,12 +79,110 @@ export function commandHandlerFactory(component, trigger, commandHandlers, event
         );
       }
       else {
-        return commandHandler(commandParams$, effectHandlers);
+        return commandHandler(commandParams$, effectHandlers).pipe(
+          // NOTE : generally command handlers won't return values synchronously
+          // It is however possible and we should trace that
+          map(commandHandlerReturnValue => {
+            debugEmitter && debugEmitter.next({
+              stage: COMMAND_HANDLER_OUTPUT_STAGE,
+              value: { command: command, returnValue: commandHandlerReturnValue }
+            });
+
+            return commandHandlerReturnValue;
+          })
+        );
       }
     });
 
     return merge(...actionsHandlersArray);
   };
+}
+
+function flattenStreamOfArrays(streamAPI) {
+  return streamAPI.concatMap(arr => streamAPI.create(o => {
+    arr.forEach(val => o.next(val));
+    o.complete();
+  }));
+}
+
+function setDebugEmitter(eventHandler, Penpal) {
+  const { subjectFactory, create, merge, filter, map, flatMap, concatMap, shareReplay } = eventHandler;
+  const debugEmitter = subjectFactory();
+  const connection = Penpal.connectToChild({
+    timeout: IFRAME_CONNECT_TIMEOUT,
+    // TODO : url
+    // URL of page to load into iframe.
+    url: IFRAME_DEBUG_URL,
+    // Container to which the iframe should be appended.
+    appendTo: document.body,
+    // Methods parent is exposing to child
+    methods: {}
+  });
+  // NOTE : we are not using `scan` to reduce the API footprint, and do it through ugly closures
+  // We could do the messaging logic with a state machine, but we do not want to load up 8Kb for such
+  // a simple logic
+  let isFrameReady = false;
+  let isChildReadyToReceive = true;
+  let childPendingToSend = [];
+  let child = null;
+  let buffer = [];
+
+  connection.promise.then(_child => {isFrameReady = true, child = _child;});
+  debugEmitter
+    .pipe(
+      map(val => {
+        if (isFrameReady && buffer.length !== 0) {
+          // Empty the buffer
+          const copiedBuffer = buffer.slice(0);
+          buffer = [];
+          return copiedBuffer;
+        }
+        else if (isFrameReady && buffer.length === 0) {
+          return [val];
+        }
+        else if (!isFrameReady) {
+          buffer.push(val);
+          return null;
+        }
+      }),
+      filter(Boolean),
+      // NOTE : trick to flatten the array of actions into the stream
+      // while still keeping order of execution of actions
+      flattenStreamOfArrays(eventHandler),
+      map(val => {
+        if (isChildReadyToReceive && childPendingToSend.length !== 0) {
+          // Empty the buffer
+          const copiedBuffer = childPendingToSend.slice(0);
+          childPendingToSend = [];
+          return copiedBuffer;
+        }
+        else if (isChildReadyToReceive && childPendingToSend.length === 0) {
+          return [val];
+        }
+        else if (!isChildReadyToReceive) {
+          childPendingToSend.push(val);
+          return null;
+        }
+      }),
+      filter(Boolean),
+      flattenStreamOfArrays(eventHandler),
+      // NOTE : simulates tap(fn) or do(fn), without having to require the function in the API
+      concatMap(val => {
+        isChildReadyToReceive = false;
+        return child.receive(val);
+      })
+    )
+    .subscribe(
+      wellReceived => { isChildReadyToReceive = true; },
+      error => {
+        isChildReadyToReceive = true;
+        console.error(`Machine > componentDidMount > debug emitter :`, error);
+      },
+      () => {isChildReadyToReceive = true;}
+    );
+  // TODO : DOC concatMap, and concatMap and flatMap must admit promises as return value
+
+  return { debugEmitter, connection };
 }
 
 /**
@@ -76,27 +200,63 @@ export class Machine extends Component {
   constructor(props) {
     super(props);
     this.state = { render: null };
+    this.connection = null;
+    this.debugEmitter = null;
   }
 
   componentDidMount() {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
-    const { eventHandler, fsm, commandHandlers, preprocessor, effectHandlers } = machineComponent.props;
-    const { subjectFactory, create, merge, filter, map, flatMap, shareReplay } = eventHandler;
+    const { eventHandler, fsm, commandHandlers, preprocessor, effectHandlers, options } = machineComponent.props;
+    const { debug, initialEvent } = options
+      ? { debug: options.debug, initialEvent: options.initialEvent }
+      : { debug: null, initialEvent: null };
+    // TODO DOC : startWith and concatMap to add
+    const { subjectFactory, create, merge, filter, map, flatMap, concatMap, startWith, shareReplay } = eventHandler;
+    const { debugEmitter, connection } = debug
+      ? setDebugEmitter(eventHandler, Penpal)
+      : { debugEmitter: null, connection: null };
+    // We need internal references for cleaning up purposes
+    this.connection = connection;
+    this.debugEmitter = debugEmitter;
 
     this.rawEventSource = subjectFactory();
-    const trigger = triggerFnFactory(this.rawEventSource);
-    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers, eventHandler, effectHandlers);
+    const trigger = triggerFnFactory(this.rawEventSource, debugEmitter);
+    // DOC : we do not trace effectHandlers, there is no generic way to do so
+    // and it is better not to do it partially (for example spying on function but leaving the rest intact)
+    const globalCommandHandler =
+      commandHandlerFactory(machineComponent, trigger, eventHandler, commandHandlers, effectHandlers, debugEmitter);
     const preprocessedEventSource = (preprocessor || identity)(this.rawEventSource);
 
-    const executedCommands$ = globalCommandHandler(preprocessedEventSource.pipe(map(fsm.yield)));
-    // TODO : error management
-    executedCommands$.subscribe(() => { })
-    ;
+    const traceMachineInput = map(machineInput => {
+      debugEmitter && debugEmitter.next({
+        stage: FSM_INPUT_STAGE,
+        value: machineInput
+      });
+
+      return machineInput;
+    });
+
+    const executedCommands$ = globalCommandHandler(
+      initialEvent
+        ? preprocessedEventSource.pipe(startWith(initialEvent), traceMachineInput, map(fsm.yield))
+        : preprocessedEventSource.pipe(traceMachineInput, map(fsm.yield))
+    );
+    // TODO DOC CONTRACT : no command handler should throw! but pass errors as messages or events
+    executedCommands$.subscribe(
+      () => { },
+      error => {
+        console.error(`Machine > Mediator : an error in the event processing chain ! Remember that command handlers ought never throw, but should pass errors as events back to the mediator.`, error);
+        debugEmitter && debugEmitter.next({ stage: ERROR_STAGE, value: "" + error });
+      },
+      () => {}
+    );
   }
 
   componentWillUnmount() {
     this.rawEventSource.complete();
+    this.debugEmitter && this.debugEmitter.complete();
+    this.connection && this.connection.destroy();
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
@@ -126,27 +286,29 @@ export class Machine extends Component {
 }
 
 export const getStateTransducerRxAdapter = RxApi => {
-  const { BehaviorSubject, merge, Observable, filter, flatMap, map, shareReplay } = RxApi;
+  const { Subject, merge, Observable, filter, flatMap, concatMap, map, startWith, shareReplay } = RxApi;
 
   return {
     // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
-    subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
+    subjectFactory: () => new Subject(),
     // NOTE : must be bound, because, reasons
     merge: merge,
     create: fn => Observable.create(fn),
     filter: filter,
     map: map,
     flatMap: flatMap,
+    concatMap: concatMap,
+    startWith: startWith,
     shareReplay: shareReplay
   };
 };
 
 // Test framework helpers
-function mock(effectHandlers, mocks, inputSequence) {
+function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
   const effects = Object.keys(effectHandlers);
   return effects.reduce((acc, effect) => {
-    acc[effect] = sinon.spy(mocks[effect](inputSequence));
-    return acc
+    acc[effect] = sinonAPI.spy(mocks[effect](inputSequence));
+    return acc;
   }, {});
 }
 
@@ -177,7 +339,7 @@ function checkOutputs(testHarness, testCase, imageGallery, container, expectedOu
 
 export function testMachineComponent(testAPI, testScenario, machineDef) {
   const { testCases, mocks, when, then, container, mockedMachineFactory } = testScenario;
-  const { test, rtl } = testAPI;
+  const { sinonAPI, test, rtl } = testAPI;
 
   // TODO : add some contracts here : like same size for input sequence and output sequence
   testCases.forEach(testCase => {
@@ -186,7 +348,7 @@ export function testMachineComponent(testAPI, testScenario, machineDef) {
       // NOTE : by construction of the machine, length of input and output sequence are the same!!
       const expectedFsmOutputSequence = testCase.outputSequence;
       const expectedOutputSequence = expectedFsmOutputSequence;
-      const mockedEffectHandlers = mock(machineDef.effectHandlers, mocks, inputSequence);
+      const mockedEffectHandlers = mock(sinonAPI, machineDef.effectHandlers, mocks, inputSequence);
       const mockedFsm = mockedMachineFactory(machineDef, mockedEffectHandlers);
       const done = assert.async(inputSequence.length);
 

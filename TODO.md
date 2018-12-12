@@ -1,4 +1,10 @@
 // TODO : test actions are run in order..
+- change subject API to next instead of `emit`, this is observable standard
+- change rollup build so I treeshake state-transducer, and also penpal
+- I added concatMap so now I have to change all demo code...
+- in demos, add options with initial event [INIT_EVENT, 0] cf. ipage_gallery_component_spcs
+1 remove dependencies on state-transducer by injecting NO_OUTPUT and INIT_EVENT!!!
+- remove dependency on sinon by injecting it in mock function...
 - have the demo work again in react-app-simple? bump the version
 - update README with nice drawing 
   - event seq. => input seq. => fsm => output seq. => assertion seq.
