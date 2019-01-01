@@ -177,3 +177,16 @@ OK for now, it seems `flex layout` is what we need. This is the closest to webst
 lot to add features (tabs, border handles) in a slick way. 
 
 # API subject + transducer
+- try catch and error processing
+- write adapter for event emitter
+  - beware of error and completion semantics: should I close the subscription a la rxjs?? 
+  to think about 
+- in example, I will have to write flatMapLatest myself!
+- DOCs!!
+- will have to write concatMap also as transducer... mmm will be concatMapPromise
+
+In order:
+- make it work with Rx with the machine example without flatMapLatest
+- add flatMapLatest
+- make it work with event emitter
+- do try catch error processing

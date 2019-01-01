@@ -2,13 +2,17 @@ import { Component } from "react";
 import { NO_OUTPUT } from "state-transducer";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_RENDER, ERROR_STAGE, FSM_INPUT_STAGE,
-  GLOBAL_COMMAND_HANDLER_INPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL, PREPROCESSOR_INPUT_STAGE
+  FSM_OUTPUT_STAGE, GLOBAL_COMMAND_HANDLER_INPUT_STAGE, GLOBAL_COMMAND_HANDLER_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT,
+  IFRAME_DEBUG_URL, PREPROCESSOR_INPUT_STAGE
 } from "./properties";
 import Penpal from "penpal";
+import { defaultRenderHandler } from "./helpers";
 
 const identity = x => x;
 
-export function triggerFnFactory(rawEventSource, debugEmitter) {
+export function triggerFnFactory(rawEventSource, eventHandlerAPI, debugEmitter) {
+  const { next } = eventHandlerAPI;
+
   return rawEventName => {
     // DOC : by convention, [rawEventName, rawEventData, ref (optional), ...anything else]
     // DOC : rawEventData is generally the raw event passed by the event handler
@@ -16,85 +20,76 @@ export function triggerFnFactory(rawEventSource, debugEmitter) {
     return function eventHandler(...args) {
       const rawEventStruct = [rawEventName].concat(args);
       // DOC : possibly non-json compatible data might not cross iframe boundary
-      debugEmitter && debugEmitter.next({ stage: PREPROCESSOR_INPUT_STAGE, value: rawEventStruct });
+      debugEmitter && next(debugEmitter, { stage: PREPROCESSOR_INPUT_STAGE, value: rawEventStruct });
 
-      return rawEventSource.next(rawEventStruct);
+      return next(rawEventSource, rawEventStruct);
     };
   };
 }
 
+// DOC: debug emitter must be same type as next accepts
+// DOC: you can have a render effect handler if necessary, can be used to simulate willUpdate and didUpdate though
+// not as precisely (other actions might be executed after the render, hopefully they do not modify react or DOM state)
 export function commandHandlerFactory(component, trigger, eventHandler, commandHandlers, effectHandlers, debugEmitter) {
-  const { create, merge, filter, map, flatMap, concatMap, shareReplay } = eventHandler;
+  const { next, pipe, filter, map } = eventHandler;
+  const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
+    [COMMAND_RENDER]: function renderHandler(trigger, params, effectHandlersWithRender) {
+      const newState = { render: params(trigger) };
+      effectHandlersWithRender[COMMAND_RENDER](component, newState);
+    }
+  });
+  const effectHandlersWithRender = effectHandlers && effectHandlers[COMMAND_RENDER]
+    ? effectHandlers
+    : Object.assign({ [COMMAND_RENDER]: defaultRenderHandler }, effectHandlers);
 
   return function globalCommandHandler(actions$) {
-    const nonEmptyActions$ = actions$.pipe(
-      // Debug emission, simulation `tap` with `map` to reduce event handler API footprint
-      map(actions => {
-        debugEmitter && debugEmitter.next({ stage: GLOBAL_COMMAND_HANDLER_INPUT_STAGE, value: actions });
-        return actions;
-      }),
-      filter(actions => actions !== NO_OUTPUT),
-      map(actions => actions.filter(action => action !== NO_OUTPUT)),
-      // NOTE : trick to flatten the array of actions into the stream
-      // while still keeping order of execution of actions
-      concatMap(actions => create(o => {
-        actions.forEach(action => o.next({ ...action, trigger }));
-        o.complete();
-      })),
-      // NOTE : I have no idea why a replay here, it should be enough with share() but whatever
-      shareReplay(1)
-    );
+    const executedActions$ = pipe(actions$, [
+        // Debug emission, simulation `tap` with `map` to reduce event handler API footprint
+        // We trace also the global handler for the edge case when the array of action is empty
+        map(actions => {
+          debugEmitter && next(debugEmitter, { stage: GLOBAL_COMMAND_HANDLER_INPUT_STAGE, value: actions });
+          return actions;
+        }),
+        filter(actions => actions !== NO_OUTPUT),
+        map(actions => actions.filter(action => action !== NO_OUTPUT)),
+        // NOTE : trick to flatten the array of actions into the stream
+        // while still keeping order of execution of actions
+        // TODO : be careful here that's wrong? I should emit a set of actions before the next one yes. But that is
+        // implicit by the synchronicity of next. So impose next synchronous in the doc somewhere.
+        map(actions => {
+          actions.forEach(action => {
+            const { command, params } = action;
 
-    // Compute the handlers for each command configured
-    const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
-      [COMMAND_RENDER]: function renderHandler(trigger, params) {
-        const newState = { render: params(trigger) };
-        debugEmitter && debugEmitter.next({
-          stage: COMMAND_HANDLER_INPUT_STAGE,
-          value: { command: COMMAND_RENDER, params: newState.render }
-        });
+            debugEmitter && next(debugEmitter, {
+              stage: COMMAND_HANDLER_INPUT_STAGE,
+              value: action
+            });
 
-        component.setState(newState);
-      }
-    });
+            const commandHandler = commandHandlersWithRenderHandler[command];
+            if (!commandHandler || typeof(commandHandler) !== "function") {
+              throw new Error(`Could not find command handler for command ${command}!`);
+            }
 
-    const registeredCommands = Object.keys(commandHandlersWithRenderHandler);
-    const actionsHandlersArray = registeredCommands.map(command => {
-      const commandHandler = commandHandlersWithRenderHandler[command];
-      const commandParams$ = nonEmptyActions$.pipe(
-        filter(action => action.command === command),
-        map(action => {
-          debugEmitter && debugEmitter.next({
-            stage: COMMAND_HANDLER_INPUT_STAGE,
-            value: action
-          });
+            // TODO : I should also catch errors occuring there and pass it to the debugger
+            const commandHandlerReturnValue = commandHandler(trigger, params, effectHandlersWithRender);
 
-          return action;
-        })
-      );
-
-      if (command === COMMAND_RENDER) {
-        return commandParams$.pipe(
-          map(({ trigger, params }) => commandHandler(trigger, params))
-        );
-      }
-      else {
-        return commandHandler(commandParams$, effectHandlers).pipe(
-          // NOTE : generally command handlers won't return values synchronously
-          // It is however possible and we should trace that
-          map(commandHandlerReturnValue => {
-            debugEmitter && debugEmitter.next({
+            // NOTE : generally command handlers won't return values synchronously
+            // It is however possible and we should trace that
+            debugEmitter && next(debugEmitter, {
               stage: COMMAND_HANDLER_OUTPUT_STAGE,
               value: { command: command, returnValue: commandHandlerReturnValue }
             });
 
-            return commandHandlerReturnValue;
-          })
-        );
-      }
-    });
+          });
 
-    return merge(...actionsHandlersArray);
+          debugEmitter && next(debugEmitter, { stage: GLOBAL_COMMAND_HANDLER_OUTPUT_STAGE, value: actions });
+
+          return actions;
+        })
+      ]
+    );
+
+    return executedActions$;
   };
 }
 
@@ -105,8 +100,10 @@ function flattenStreamOfArrays(streamAPI) {
   }));
 }
 
+// TODO : write that with subscribe and compose
+// TODO : might have to write a concatMap transducer...
 function setDebugEmitter(eventHandler, Penpal) {
-  const { subjectFactory, create, merge, filter, map, flatMap, concatMap, shareReplay } = eventHandler;
+  const { subjectFactory, next, error, complete, subscribe, transduce } = eventHandler;
   const debugEmitter = subjectFactory();
   const connection = Penpal.connectToChild({
     timeout: IFRAME_CONNECT_TIMEOUT,
@@ -180,7 +177,6 @@ function setDebugEmitter(eventHandler, Penpal) {
       },
       () => {isChildReadyToReceive = true;}
     );
-  // TODO : DOC concatMap, and concatMap and flatMap must admit promises as return value
 
   return { debugEmitter, connection };
 }
@@ -200,6 +196,7 @@ export class Machine extends Component {
   constructor(props) {
     super(props);
     this.state = { render: null };
+    this.eventHandler = props.eventHandler;
     this.connection = null;
     this.debugEmitter = null;
   }
@@ -207,12 +204,13 @@ export class Machine extends Component {
   componentDidMount() {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
-    const { eventHandler, fsm, commandHandlers, preprocessor, effectHandlers, options } = machineComponent.props;
-    const { debug, initialEvent } = options
-      ? { debug: options.debug, initialEvent: options.initialEvent }
-      : { debug: null, initialEvent: null };
+
+    const { fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options } = machineComponent.props;
+    const { debug } = options ? { debug: options.debug } : { debug: null };
     // TODO DOC : startWith and concatMap to add
-    const { subjectFactory, create, merge, filter, map, flatMap, concatMap, startWith, shareReplay } = eventHandler;
+    // const { subjectFactory, create, merge, filter, map, flatMap, concatMap, startWith, shareReplay } = eventHandler;
+    // TODO : maybe I need unsubscribe?
+    const { subjectFactory, next, error, complete, subscribe, pipe, filter, map } = eventHandler;
     const { debugEmitter, connection } = debug
       ? setDebugEmitter(eventHandler, Penpal)
       : { debugEmitter: null, connection: null };
@@ -221,62 +219,50 @@ export class Machine extends Component {
     this.debugEmitter = debugEmitter;
 
     this.rawEventSource = subjectFactory();
-    const trigger = triggerFnFactory(this.rawEventSource, debugEmitter);
+    const trigger = triggerFnFactory(this.rawEventSource, eventHandler, debugEmitter);
     // DOC : we do not trace effectHandlers, there is no generic way to do so
     // and it is better not to do it partially (for example spying on function but leaving the rest intact)
+    // TODO : should try catch!!
     const globalCommandHandler =
       commandHandlerFactory(machineComponent, trigger, eventHandler, commandHandlers, effectHandlers, debugEmitter);
+    // TODO : should try catch!!
     const preprocessedEventSource = (preprocessor || identity)(this.rawEventSource);
 
     const traceMachineInput = map(machineInput => {
-      debugEmitter && debugEmitter.next({
-        stage: FSM_INPUT_STAGE,
-        value: machineInput
-      });
+      debugEmitter && next(debugEmitter, { stage: FSM_INPUT_STAGE, value: machineInput });
 
       return machineInput;
     });
+    const traceMachineOutput = map(machineOutput => {
+      // We trace it to detect null values for instance, which we would otherwise escape
+      debugEmitter && next(debugEmitter, { stage: FSM_OUTPUT_STAGE, value: machineOutput });
 
+      return machineOutput;
+    });
+
+    // TODO : should try catch!! fsm.yield may error all those errors are final!! but pass it to debug emitter first
+    // before throwing!
     const executedCommands$ = globalCommandHandler(
-      initialEvent
-        ? preprocessedEventSource.pipe(startWith(initialEvent), traceMachineInput, map(fsm.yield))
-        : preprocessedEventSource.pipe(traceMachineInput, map(fsm.yield))
+      pipe(preprocessedEventSource, [traceMachineInput, map(fsm.yield), traceMachineOutput])
     );
     // TODO DOC CONTRACT : no command handler should throw! but pass errors as messages or events
-    executedCommands$.subscribe(
-      () => { },
-      error => {
-        console.error(`Machine > Mediator : an error in the event processing chain ! Remember that command handlers ought never throw, but should pass errors as events back to the mediator.`, error);
-        debugEmitter && debugEmitter.next({ stage: ERROR_STAGE, value: "" + error });
-      },
-      () => {}
+    subscribe(executedCommands$, {
+        next: x => {console.warn('emitted', x) },
+        error: error => {
+          console.error(`Machine > Mediator : an error in the event processing chain ! Remember that command handlers ought never throw, but should pass errors as events back to the mediator.`, error);
+          debugEmitter && next(debugEmitter, { stage: ERROR_STAGE, value: "" + error });
+        },
+        complete: () => {}
+      }
     );
   }
 
+  // TODO : check that the implementation of complete for debug emitter does complete all listeners (is that necessary?)
+  // DOC:  debug emitter must have subject interface i.e.e same as subject factory returns
   componentWillUnmount() {
-    this.rawEventSource.complete();
-    this.debugEmitter && this.debugEmitter.complete();
+    this.eventHandler.complete(this.rawEventSource);
+    this.debugEmitter && this.eventHandler.complete(this.debugEmitter);
     this.connection && this.connection.destroy();
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    // called after the render method.
-    const machineComponent = this;
-    const { componentDidUpdate: cdu } = machineComponent.props;
-
-    if (cdu) {
-      cdu.call(null, machineComponent, prevProps, prevState, snapshot);
-    }
-  }
-
-  componentWillUpdate(nextProps, nextState) {
-    // perform any preparations for an upcoming update
-    const machineComponent = this;
-    const { componentWillUpdate: cwu } = machineComponent.props;
-
-    if (cwu) {
-      cwu.call(null, machineComponent, nextProps, nextState);
-    }
   }
 
   render() {
@@ -286,22 +272,24 @@ export class Machine extends Component {
 }
 
 export const getStateTransducerRxAdapter = RxApi => {
-  const { Subject, merge, Observable, filter, flatMap, concatMap, map, startWith, shareReplay } = RxApi;
+  const { Subject, filter, map } = RxApi;
 
   return {
     // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
-    subjectFactory: () => new Subject(),
-    // NOTE : must be bound, because, reasons
-    merge: merge,
-    create: fn => Observable.create(fn),
+    subjectFactory: () => {
+      return new Subject();
+    },
+    next: (obs, val) => obs.next(val),
+    error: (obs, error) => obs.next(error),
+    complete: obs => obs.complete(),
+    subscribe: (observable, observer) => observable.subscribe(observer),
+    pipe: (obs, args) => obs.pipe(...args),
     filter: filter,
     map: map,
-    flatMap: flatMap,
-    concatMap: concatMap,
-    startWith: startWith,
-    shareReplay: shareReplay
   };
 };
+
+// TODO: write adapter for event emitter
 
 // Test framework helpers
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
@@ -398,12 +386,15 @@ export function testMachineComponent(testAPI, testScenario, machineDef) {
 }
 
 function assertPropsContract(props) {
-  const { eventHandler, fsm, commandHandlers, preprocessor } = props;
+  const { fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options } = props;
   if (!eventHandler) throw new Error(`<Machine/> : eventHandler prop has a falsy value!`);
-  const { subjectFactory, create, merge } = eventHandler;
+  const { subjectFactory, next, error, complete, subscribe, pipe, filter,map } = eventHandler;
   if (!subjectFactory) throw new Error(`<Machine/> : subjectFactory prop has a falsy value!`);
-  if (!create) throw new Error(`<Machine/> : create prop has a falsy value!`);
-  if (!merge) throw new Error(`<Machine/> : merge prop has a falsy value!`);
+  if (!next) throw new Error(`<Machine/> : next prop has a falsy value!`);
+  if (!subscribe) throw new Error(`<Machine/> : subscribe prop has a falsy value!`);
+  if (!pipe) throw new Error(`<Machine/> : pipe prop has a falsy value!`);
+  if (!filter) throw new Error(`<Machine/> : filter prop has a falsy value!`);
+  if (!map) throw new Error(`<Machine/> : map prop has a falsy value!`);
   if (!fsm) throw new Error(`<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`);
   if (!fsm.yield) throw new Error(`<Machine/> : fsm prop must have a yield property!`);
 }

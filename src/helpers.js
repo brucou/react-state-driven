@@ -31,3 +31,18 @@ export function destructureEvent(eventStruct) {
     ref: eventStruct[2]
   };
 }
+
+export function defaultRenderHandler(component, newState, callback) {
+  return component.setState(newState, callback);
+}
+
+export function tryCatch(fn, err){
+  return function (...args){
+    try{
+    return fn(...args)
+    }
+    catch (e) {
+      return err(e)
+    }
+  }
+}
