@@ -199,6 +199,7 @@ export class Machine extends Component {
     this.eventHandler = props.eventHandler;
     this.connection = null;
     this.debugEmitter = null;
+    this.subscription = null;
   }
 
   componentDidMount() {
@@ -207,9 +208,8 @@ export class Machine extends Component {
 
     const { fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options } = machineComponent.props;
     const { debug } = options ? { debug: options.debug } : { debug: null };
-    // TODO DOC : startWith and concatMap to add
-    // const { subjectFactory, create, merge, filter, map, flatMap, concatMap, startWith, shareReplay } = eventHandler;
-    // TODO : maybe I need unsubscribe?
+    // TODO DOC : concatMap to add because of debug emitter?? try to avoid it
+    // const { subjectFactory, next, error, complete, subscribe, pipe, filter, map } = eventHandler;
     const { subjectFactory, next, error, complete, subscribe, pipe, filter, map } = eventHandler;
     const { debugEmitter, connection } = debug
       ? setDebugEmitter(eventHandler, Penpal)
@@ -247,7 +247,7 @@ export class Machine extends Component {
     );
     // TODO DOC CONTRACT : no command handler should throw! but pass errors as messages or events
     subscribe(executedCommands$, {
-        next: x => {console.warn('emitted', x) },
+        next: x => {},
         error: error => {
           console.error(`Machine > Mediator : an error in the event processing chain ! Remember that command handlers ought never throw, but should pass errors as events back to the mediator.`, error);
           debugEmitter && next(debugEmitter, { stage: ERROR_STAGE, value: "" + error });
@@ -261,6 +261,7 @@ export class Machine extends Component {
   // DOC:  debug emitter must have subject interface i.e.e same as subject factory returns
   componentWillUnmount() {
     this.eventHandler.complete(this.rawEventSource);
+    this.subscription.unsubscribe();
     this.debugEmitter && this.eventHandler.complete(this.debugEmitter);
     this.connection && this.connection.destroy();
   }
