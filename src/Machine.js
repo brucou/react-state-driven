@@ -126,6 +126,7 @@ function setDebugEmitter(eventHandler, Penpal) {
 
   connection.promise.then(_child => {isFrameReady = true, child = _child;});
   debugEmitter
+  // TODO : change that to a single obseervable.create, that is all I need
     .pipe(
       map(val => {
         if (isFrameReady && buffer.length !== 0) {
@@ -210,6 +211,10 @@ export class Machine extends Component {
     const { debug } = options ? { debug: options.debug } : { debug: null };
     // TODO DOC : concatMap to add because of debug emitter?? try to avoid it
     // const { subjectFactory, next, error, complete, subscribe, pipe, filter, map } = eventHandler;
+    // TODO : replace filter, map and pipe by create that is all I need
+    // but think about error and completion channels,
+    // TODO remove next error complete subscribe, and use it directly on the subject
+    // so I only have subjectFactory, ObservableFactory
     const { subjectFactory, next, error, complete, subscribe, pipe, filter, map } = eventHandler;
     const { debugEmitter, connection } = debug
       ? setDebugEmitter(eventHandler, Penpal)
@@ -276,7 +281,6 @@ export const getStateTransducerRxAdapter = RxApi => {
   const { Subject, filter, map } = RxApi;
 
   return {
-    // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
     subjectFactory: () => {
       return new Subject();
     },

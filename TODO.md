@@ -1,4 +1,21 @@
 // TODO : test actions are run in order..
+- updatE README! clean code. new article will send lots of people
+- when finished, update state transducer to remove the event handler library of options! cf code 
+TODOs
+  - actually might even have meta data in observe and subject interface (give it a name for 
+  tracing?)
+  - if no eventHandler passed, then use internal event handling library which is just 
+  eventEmitter and listeners. Then leave transducers out
+  - make preprocessor an object :
+    - {rawEvent : (rawEventData, ref) => ...}
+  - if not a function then use the object format
+- do a test generation library also for testing the FSM cd. movie-search-app, for now I only 
+generate the inputs
+- then do a library also for running the tests in DOM real browser 
+- include this as observable library in connection with the event emitter : 4 Kb all included!!! 
+and that means all operators which can be tree shaken -- and performant!!
+- have a rollup config for min and one without, and add source map
+- write same movie search app for hyperHTML, svelte and angular!
 - change API to have observable, observer, and pipe API for event handler!!
   - change subject API to next instead of `emit`, this is observable standard
 - update demo code

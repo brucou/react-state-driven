@@ -175,7 +175,7 @@ For illustration, the user interface starts like this :
 
 ![machine visualization](assets/image%20gallery%20state%20cat.png)
 
-The live example [can be accessed here](https://frontarm.com/demoboard/?id=61be6ab3-9542-4eac-a30c-a6b4fa6ffbfa).
+The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
 
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.

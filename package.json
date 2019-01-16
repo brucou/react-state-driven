@@ -68,7 +68,7 @@
     "ramda": "^0.26.0"
   },
   "dependencies": {
-    "state-transducer": "^0.9.5",
+    "state-transducer": "^0.9.6",
     "penpal": "^3.0.3",
     "transducers-es6": "^0.4.0"
   },
