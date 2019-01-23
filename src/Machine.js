@@ -248,7 +248,7 @@ export class Machine extends Component {
     // TODO : should try catch!! fsm.yield may error all those errors are final!! but pass it to debug emitter first
     // before throwing!
     const executedCommands$ = globalCommandHandler(
-      pipe(preprocessedEventSource, [traceMachineInput, map(fsm.yield), traceMachineOutput])
+      pipe(preprocessedEventSource, [traceMachineInput, map(fsm), traceMachineOutput])
     );
     // TODO DOC CONTRACT : no command handler should throw! but pass errors as messages or events
     subscribe(executedCommands$, {
