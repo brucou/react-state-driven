@@ -401,5 +401,4 @@ function assertPropsContract(props) {
   if (!filter) throw new Error(`<Machine/> : filter prop has a falsy value!`);
   if (!map) throw new Error(`<Machine/> : map prop has a falsy value!`);
   if (!fsm) throw new Error(`<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`);
-  if (!fsm.yield) throw new Error(`<Machine/> : fsm prop must have a yield property!`);
 }
