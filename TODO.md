@@ -1,5 +1,10 @@
 // TODO : test actions are run in order..
-- updatE README! clean code. new article will send lots of people
+- test with renderWith, only factory and subscribe, latest of state transducer, initial event, 
+movie search app
+- incorporate in codesandbox AND demoboard link for article then PUBLISH the motherfucking article
+  - idea is stat machine will be the same among all ui libraries
+- try with initial control state and new version of state transducer
+- UPDATE README! clean code. new article will send lots of people
 - when finished, update state transducer to remove the event handler library of options! cf code 
 TODOs
   - actually might even have meta data in observe and subject interface (give it a name for 

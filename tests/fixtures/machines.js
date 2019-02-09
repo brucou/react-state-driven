@@ -17,11 +17,12 @@ export const COMMAND_SEARCH = "command_search";
 
 const RxApi = {Subject, Observable, merge, filter, flatMap, concatMap, map, startWith, shareReplay};
 
-export const imageGallerySwitchMap = {
-  options : {debug :false, initialEvent : {[INIT_EVENT] : void 0}},
+export const imageGallery = {
+  options : {debug :{console}, initialEvent : {[INIT_EVENT] : void 0}},
   initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
-  states: { start: "", loading: "", gallery: "", error: "", photo: "" },
-  events: ["SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
+  initialControlState : "init",
+  states: { init: "", start: "", loading: "", gallery: "", error: "", photo: "" },
+  events: ["START", "SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
   eventHandler: getStateTransducerRxAdapter(RxApi),
   preprocessor: rawEventSource => rawEventSource.pipe(
     map(ev => {
@@ -59,10 +60,11 @@ export const imageGallerySwitchMap = {
 
       return NO_INTENT;
     }),
-    filter(x => x !== NO_INTENT)
+    filter(x => x !== NO_INTENT),
+    startWith({START : void 0})
   ),
   transitions: [
-    { from: INIT_STATE, event: INIT_EVENT, to: "start", action: NO_ACTIONS },
+    { from: "init", event: "START", to: "start", action: NO_ACTIONS },
     { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
     {
       from: "loading", event: "SEARCH_SUCCESS", to: "gallery", action: (extendedState, eventData, fsmSettings) => {
@@ -111,10 +113,8 @@ export const imageGallerySwitchMap = {
   },
   effectHandlers: { runSearchQuery },
   commandHandlers: {
-    [COMMAND_SEARCH]: (obs, effectHandlers) => {
-      const { runSearchQuery } = effectHandlers;
-
-      return obs.pipe(switchMap(({ trigger, params }) => {
+    [COMMAND_SEARCH]: (trigger, params, effectHandlersWithRender) => {
+      const { runSearchQuery } = effectHandlersWithRender;
         const query = params;
         return runSearchQuery(query)
           .then(data => {
@@ -123,7 +123,6 @@ export const imageGallerySwitchMap = {
           .catch(error => {
             trigger("SEARCH_FAILURE")(void 0);
           });
-      }));
     }
   },
   inject: new Flipping(),

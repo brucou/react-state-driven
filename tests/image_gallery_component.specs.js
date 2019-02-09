@@ -2,11 +2,11 @@ import React from "react";
 import {
   cleanup, fireEvent, getAllByTestId, getByLabelText, getByTestId, queryByTestId, render, wait, waitForElement, within
 } from "react-testing-library";
-import { create_state_machine, decorateWithEntryActions, INIT_EVENT } from "state-transducer";
+import { createStateMachine, decorateWithEntryActions, INIT_EVENT } from "state-transducer";
 import { COMMAND_RENDER, Machine } from "../src";
 import { applyJSONpatch, noop, normalizeHTML } from "./helpers";
 import prettyFormat from "pretty-format";
-import { imageGallerySwitchMap } from "./fixtures/machines";
+import { imageGallery } from "./fixtures/machines";
 import { CANCEL_SEARCH, PHOTO, PHOTO_DETAIL, SEARCH, SEARCH_ERROR, SEARCH_INPUT } from "./fixtures/test-ids";
 import { COMMAND_SEARCH } from "../src/properties";
 import sinon from "sinon";
@@ -41,7 +41,8 @@ QUnit.module("Testing image gallery component", {
 const testAPI = {
   sinonAPI: sinon,
   test: QUnit.test.bind(QUnit),
-  rtl: { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText }
+  rtl: { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText },
+  debug:{console}
 };
 const when = {
   [INIT_EVENT]: (testHarness, testCase, component, anchor) => {
@@ -49,7 +50,7 @@ const when = {
     const { render, fireEvent, waitForElement, getByTestId, queryByTestId, wait, within, getByLabelText } = rtl;
 
     render(component, { container: anchor });
-    return waitForElement(() => true);
+    return waitForElement(() => true, {timeout: 1000});
   },
   SEARCH: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
@@ -73,7 +74,7 @@ const when = {
     // the condition. STARTING FROM the moment of the wait call. So the wait call must happen before the screen is
     // updated, otherwise it waits forever (i.e. the duration of the timeout).  This in turns means the related
     // input simulation must not wait too long before passing the relay to the assertion section...
-    return waitForElement(() => getByTestId(container, PHOTO))
+    return waitForElement(() => getByTestId(container, PHOTO), {timeout: 1000})
     // !! very important for the edge case when the search success is the last to execute.
     // Because of react async rendering, the DOM is not updated yet, that or some other reason anyways
     // Maybe the problem is when the SECOND search success arrives, there already are elements with testid photo, so
@@ -81,7 +82,7 @@ const when = {
       .then(() => wait(() => true));
   },
   SEARCH_FAILURE: (testHarness, testCase, component, anchor) => {
-    return waitForElement(() => getByTestId(container, SEARCH_ERROR));
+    return waitForElement(() => getByTestId(container, SEARCH_ERROR), {timeout: 1000});
   },
   SELECT_PHOTO: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
@@ -104,7 +105,7 @@ const when = {
     fireEvent.click(photoToClick);
 
     // Wait a tick defensively. Not strictly necessary as, by implementation of test harness, expectations are delayed
-    return waitForElement(() => true);
+    return waitForElement(() => true, {timeout: 1000});
   },
   CANCEL_SEARCH: (testHarness, testCase, component, anchor) => {
     const { assert, rtl } = testHarness;
@@ -218,11 +219,11 @@ const mocks = {
 
   }
 };
-const testScenario = { testCases: testCases, mocks, when, then, container,mockedMachineFactory };
+const testScenario = { testCases: testCases, mocks, when, then, container, mockedMachineFactory };
 
 function mockedMachineFactory(machine, mockedEffectHandlers) {
   const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
-  const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
+  const fsm = createStateMachine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch, debug : {console} });
 
   return React.createElement(Machine, {
     options : machine.options,
@@ -236,5 +237,5 @@ function mockedMachineFactory(machine, mockedEffectHandlers) {
   }, null);
 }
 
-testMachineComponent(testAPI, testScenario, imageGallerySwitchMap);
+testMachineComponent(testAPI, testScenario, imageGallery);
 

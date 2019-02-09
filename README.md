@@ -1060,7 +1060,7 @@ flickr endpoint. We could have mocked the request execution (say `fetchJsonp`), 
 In our image gallery example, it goes like this : 
 
 ```javascript
-export const imageGallerySwitchMap = {
+export const imageGallery = {
 (...)
   effectHandlers: { runSearchQuery },
   commandHandlers: {

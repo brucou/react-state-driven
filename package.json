@@ -3,7 +3,7 @@
   "name": "react-state-driven",
   "sideEffects": false,
   "author": "brucou",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "license": "MIT",
   "description": "A state machine abstraction for React",
   "main": "dist/react-state-driven.js",
@@ -65,10 +65,11 @@
     "graph-adt": "^0.7.0",
     "pretty-format": "^23.6.0",
     "html-parse-stringify": "^1.0.3",
-    "ramda": "^0.26.0"
+    "ramda": "^0.26.0",
+    "superagent":"^4.1.0"
   },
   "dependencies": {
-    "state-transducer": "^0.9.6",
+    "state-transducer": "^0.11.0",
     "penpal": "^3.0.3",
     "transducers-es6": "^0.4.0"
   },
