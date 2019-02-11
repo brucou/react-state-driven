@@ -1,6 +1,7 @@
 // TODO : test actions are run in order..
 - test with renderWith, only factory and subscribe, latest of state transducer, initial event, 
 movie search app
+- DOC!!
 - incorporate in codesandbox AND demoboard link for article then PUBLISH the motherfucking article
   - idea is stat machine will be the same among all ui libraries
 - try with initial control state and new version of state transducer

@@ -1,8 +1,7 @@
 import ReactDOMServer from "react-dom/server";
-import { merge as mergeR, range } from "ramda";
-import {
-  computeTimesCircledOn, decorateWithEntryActions, generateTestSequences, INIT_EVENT, INIT_STATE, NO_OUTPUT
-} from "state-transducer";
+import { merge as mergeR, range, omit } from "ramda";
+import { computeTimesCircledOn, decorateWithEntryActions, INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
+import { generateTestSequences } from "state-transducer-testing";
 import { assertContract, COMMAND_SEARCH, constGen, formatResult, isArrayUpdateOperations } from "./helpers";
 import { applyPatch } from "json-patch-es6/lib/duplex";
 import { COMMAND_RENDER, CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE } from "../src/properties";
@@ -29,7 +28,7 @@ export function formatOutputSequence(results) {
 
           return {
             command,
-            params: ReactDOMServer.renderToStaticMarkup(params(fakeTrigger))
+            params
           };
         });
       })
@@ -76,7 +75,7 @@ QUnit.test("image search gallery", function exec_test(assert) {
         from: INIT_STATE, event: INIT_EVENT, to: "init",
         gen: constGen(void 0, { pending: [], done: [], current: null })
       },
-      { from: "init", event: "START", to: "start", gen: constGen(void 0, { pending: [], done: [], current: null })},
+      { from: "init", event: "START", to: "start", gen: constGen(void 0, { pending: [], done: [], current: null }) },
       {
         from: "start", event: "SEARCH", to: "loading",
         gen: constGen(searchQueries[0], { pending: [searchQueries[0]], done: [] })
@@ -191,16 +190,11 @@ QUnit.test("image search gallery", function exec_test(assert) {
   const strategy = ALL_n_TRANSITIONS_WITH_REPEATED_TARGET({ maxNumberOfTraversals: 2, targetVertex: "gallery" });
   const settings = mergeR({ updateState: applyJSONpatch }, { strategy });
   const results = generateTestSequences(fsmDef, generators, settings);
-
+debugger
   console.log(`results`, formatOutputSequence(results));
 
   const inputSequences = results.map(result => result.inputSequence);
   const outputsSequences = results.map(x => x.outputSequence);
-  const spyTrigger = function spyTrigger(eventName) {
-    return function spyEventHandler(rawEvent, ref, other) {
-      void 0;
-    };
-  };
   const getInputKey = function getInputKey(input) {return Object.keys(input)[0];};
   const formattedInputSequences = inputSequences.map(inputSequence => inputSequence.map(getInputKey));
   const formattedOutputsSequences = outputsSequences
@@ -216,7 +210,7 @@ QUnit.test("image search gallery", function exec_test(assert) {
             if (command === COMMAND_RENDER) {
               return {
                 command: command,
-                params: params(spyTrigger).props
+                params: omit(['trigger', 'next'], params)
               };
             }
             else {
@@ -230,19 +224,19 @@ QUnit.test("image search gallery", function exec_test(assert) {
     .map(inputSequence => {
       return inputSequence.reduce((acc, input) => {
         const assign = Object.assign.bind(Object);
-        const defaultProps = { query: "", items: [], photo: undefined, gallery: "", trigger: spyTrigger.name };
+        const defaultProps = { query: "", items: [], photo: undefined, gallery: ""};
         const { outputSeq, state } = acc;
         const { pendingQuery, currentItems, currentPhoto } = state;
         const event = Object.keys(input)[0];
         const eventData = input[event];
 
         function searchCommand(query) {
-          return { "command": COMMAND_SEARCH, "params": query };
+          return { "command": COMMAND_SEARCH, "params": {query} };
         }
 
         switch (event) {
           case INIT_EVENT:
-            return acc
+            return acc;
           case "START":
             return {
               outputSeq: outputSeq.concat([

@@ -219,23 +219,22 @@ const mocks = {
 
   }
 };
-const testScenario = { testCases: testCases, mocks, when, then, container, mockedMachineFactory };
 
 function mockedMachineFactory(machine, mockedEffectHandlers) {
   const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
   const fsm = createStateMachine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch, debug : {console} });
 
   return React.createElement(Machine, {
+    fsm: fsm,
+    renderWith : machine.renderWith,
     options : machine.options,
     eventHandler: machine.eventHandler,
     preprocessor: machine.preprocessor,
-    fsm: fsm,
     effectHandlers: mockedEffectHandlers,
-    commandHandlers: machine.commandHandlers,
-    componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
-    componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
+    commandHandlers: machine.commandHandlers
   }, null);
 }
 
-testMachineComponent(testAPI, testScenario, imageGallery);
+const testScenario = { testCases: testCases, mocks, when, then, container, mockedMachineFactory };
 
+testMachineComponent(testAPI, testScenario, imageGallery);

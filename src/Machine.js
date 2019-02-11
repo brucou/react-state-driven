@@ -1,16 +1,13 @@
-import { Component } from "react";
+import React, { Component } from "react";
 import { NO_OUTPUT } from "state-transducer";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER,
   COMPLETE_STAGE, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL
 } from "./properties";
 import Penpal from "penpal";
-import { defaultRenderHandler, identity, logAndRethrow, tryCatch } from "./helpers";
+import { identity, logAndRethrow, tryCatch } from "./helpers";
 
 const EVENT_HANDLER_API_NEXT_ERR = `An error occurred while using the 'next' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_PIPE_ERR = `An error occurred while using the 'pipe' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_FILTER_ERR = `An error occurred while using the 'filter' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_MAP_ERR = `An error occurred while using the 'map' function defined in event handler component prop!`;
 const EVENT_HANDLER_API_SUBJECT_FACTORY_ERR = `An error occurred while using the 'subjectFactory' function defined in event handler component prop!`;
 const EVENT_HANDLER_API_ERROR_ERR = `An error occurred while using the 'error' function defined in event handler component prop!`;
 const EVENT_HANDLER_API_COMPLETE_ERR = `An error occurred while using the 'complete' function defined in event handler component prop!`;
@@ -113,16 +110,21 @@ function setDebugEmitter(eventHandler, Penpal) {
   return { debugEmitter, connection };
 }
 
+const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
+  return machineComponent.setState(
+    { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
+    params.callback
+  );
+};
+
 /**
  * Class implementing a reactive system modelled by a state machine (fsm).
  * The system behaviour is determined by properties passed at construction time :
  * - `preprocessor` : translate user events and system events into machine events
- * - `fsm` : uninitialized fsm
+ * - `fsm` : fsm
  * - `commandHandlers` : maps commands output by the fsm to the function executing those commands
- * - componentWillUpdate : a function for customizing `componentWillUpdate` for a class instance. That function
- * however has a different signature, and incorporates the fsm's settings as parameters
- * - componentDidUpdate : a function for customizing `componentDidUpdate` for a class instance. That function
- * however has a different signature, and incorporates the fsm's settings as parameters
+ * TODO : finish : effectHandlers, the eventHandling API, the renderWith
+ * DOC : callback for the react default render function in options
  */
 export class Machine extends Component {
   constructor(props) {
@@ -174,12 +176,6 @@ export class Machine extends Component {
         effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
       }
     });
-    const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
-      return machineComponent.setState(
-        { render: h(renderWith, Object.assign({}, params, { next }), []) },
-        callback
-      );
-    };
 
     const effectHandlersWithRender =
       effectHandlers && effectHandlers[COMMAND_RENDER]
@@ -240,8 +236,6 @@ export class Machine extends Component {
             error
           );
           debugEmitter && debugEmitter.next({ stage: ERROR_STAGE, value: "" + error });
-          // TODO : complete debugEmitter and rawEventSource? they cshould complete themselves right?
-
         },
         complete: () => {
           debugEmitter && debugEmitter.next({ stage: COMPLETE_STAGE, value: "" + error });
@@ -250,13 +244,12 @@ export class Machine extends Component {
     );
     // DOC : we do not trace effectHandlers, there is no generic way to do so
     // and it is better not to do it partially (for example spying on function but leaving the rest intact)
-    // TODO DOC CONTRACT : no command handler should throw! but pass errors as messages or events
+    // DOC CONTRACT : no command handler should throw! but pass errors as messages or events
 
     // Start with the initial event if any
     initialEvent && this.rawEventSource.next(initialEvent);
   }
 
-  // TODO : check that the implementation of complete for debug emitter does complete all listeners (is that necessary?)
   // DOC:  debug emitter must have subject interface i.e.e same as subject factory returns
   componentWillUnmount() {
     this.subscription.unsubscribe();
@@ -271,24 +264,20 @@ export class Machine extends Component {
   }
 }
 
+// TODO : test
 export const getStateTransducerRxAdapter = RxApi => {
-  const { Subject, filter, map } = RxApi;
+  const { Subject } = RxApi;
 
   return {
     subjectFactory: () => {
       return new Subject();
     },
-    next: (obs, val) => obs.next(val),
-    error: (obs, error) => obs.next(error),
-    complete: obs => obs.complete(),
     subscribe: (observable, observer) => observable.subscribe(observer),
-    pipe: (obs, args) => obs.pipe(...args),
-    filter: filter,
-    map: map
   };
 };
 
-// TODO: write adapter for event emitter
+// TODO: write adapter for event emitter too
+// TODO : put both adapters in here ? YES they are short
 
 // Test framework helpers
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {

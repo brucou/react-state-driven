@@ -1,11 +1,12 @@
-import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
-import { destructureEvent, NO_ACTIONS, NO_INTENT, renderAction, renderGalleryApp, runSearchQuery } from "../helpers";
+import { INIT_EVENT, NO_OUTPUT } from "state-transducer";
+import { destructureEvent, NO_ACTIONS, NO_INTENT, renderAction, runSearchQuery } from "../helpers";
 import h from "react-hyperscript";
 import Flipping from "flipping";
-import { filter, flatMap, concatMap, map, shareReplay, switchMap, startWith } from "rxjs/operators";
-import { Subject, merge, Observable } from "rxjs";
-import { GalleryApp } from "./components";
+import { concatMap, filter, flatMap, map, shareReplay, startWith } from "rxjs/operators";
+import { merge, Observable, Subject } from "rxjs";
+import { GalleryApp, triggerFnFactory } from "./components";
 import { getStateTransducerRxAdapter } from "../../src/Machine";
+import { COMMAND_RENDER } from "../../src";
 
 export const BUTTON_CLICKED = "button_clicked";
 export const KEY_PRESSED = "key_pressed";
@@ -15,12 +16,26 @@ export const INPUT_CHANGED = "input_changed";
 export const KEY_ENTER = `Enter`;
 export const COMMAND_SEARCH = "command_search";
 
-const RxApi = {Subject, Observable, merge, filter, flatMap, concatMap, map, startWith, shareReplay};
+const RxApi = { Subject, Observable, merge, filter, flatMap, concatMap, map, startWith, shareReplay };
+
+function makeRenderCommand(gallery) {
+  return function(extendedState, eventData, fsmSettings) {
+    const { query, items, photo } = extendedState;
+debugger
+    return {
+      outputs: [{
+        command: COMMAND_RENDER,
+        params: { query, photo, items, gallery }
+      }],
+      updates: []
+    };
+  };
+}
 
 export const imageGallery = {
-  options : {debug :{console}, initialEvent : {[INIT_EVENT] : void 0}},
+  options: { debug: { console } },
   initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
-  initialControlState : "init",
+  initialControlState: "init",
   states: { init: "", start: "", loading: "", gallery: "", error: "", photo: "" },
   events: ["START", "SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
   eventHandler: getStateTransducerRxAdapter(RxApi),
@@ -61,8 +76,9 @@ export const imageGallery = {
       return NO_INTENT;
     }),
     filter(x => x !== NO_INTENT),
-    startWith({START : void 0})
+    startWith({ START: void 0 })
   ),
+  renderWith: GalleryApp,
   transitions: [
     { from: "init", event: "START", to: "start", action: NO_ACTIONS },
     { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
@@ -96,37 +112,36 @@ export const imageGallery = {
     loading: (extendedState, eventData, fsmSettings) => {
       const { items, photo } = extendedState;
       const query = eventData;
-      const searchCommand = { command: COMMAND_SEARCH, params: query };
-      const renderGalleryAction = renderAction(trigger =>
-        h(GalleryApp, { query, items, trigger, photo, gallery: "loading" }, [])
-      );
+      const searchCommand = { command: COMMAND_SEARCH, params: { query } };
+      const renderGalleryAction = makeRenderCommand("loading")({query, items, photo}, eventData, fsmSettings);
 
       return {
-        outputs: [searchCommand, renderGalleryAction.outputs],
+        outputs: [searchCommand].concat(renderGalleryAction.outputs),
         updates: []
       };
     },
-    photo: renderGalleryApp("photo"),
-    gallery: renderGalleryApp("gallery"),
-    error: renderGalleryApp("error"),
-    start: renderGalleryApp("start")
+    photo: makeRenderCommand("photo"),
+    gallery: makeRenderCommand("gallery"),
+    error: makeRenderCommand("error"),
+    start: makeRenderCommand("start")
   },
   effectHandlers: { runSearchQuery },
   commandHandlers: {
-    [COMMAND_SEARCH]: (trigger, params, effectHandlersWithRender) => {
+    [COMMAND_SEARCH]: (next, params, effectHandlersWithRender) => {
       const { runSearchQuery } = effectHandlersWithRender;
-        const query = params;
-        return runSearchQuery(query)
-          .then(data => {
-            trigger("SEARCH_SUCCESS")(data.items);
-          })
-          .catch(error => {
-            trigger("SEARCH_FAILURE")(void 0);
-          });
+      const {query} = params;
+      return runSearchQuery(query)
+        .then(data => {
+          // The preprocessor expect arguments in form of an array!
+          next(["SEARCH_SUCCESS", data.items]);
+        })
+        .catch(error => {
+          next(["SEARCH_FAILURE", void 0]);
+        });
     }
   },
   inject: new Flipping(),
   componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
-  componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();},
+  componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
 };
 
