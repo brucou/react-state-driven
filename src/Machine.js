@@ -264,7 +264,7 @@ export class Machine extends Component {
   }
 }
 
-// TODO : test
+// TODO : harmonize the two adapters naming
 export const getStateTransducerRxAdapter = RxApi => {
   const { Subject } = RxApi;
 
@@ -276,8 +276,26 @@ export const getStateTransducerRxAdapter = RxApi => {
   };
 };
 
-// TODO: write adapter for event emitter too
-// TODO : put both adapters in here ? YES they are short
+export const emitonoffAdapter = emitonoff => {
+  const eventEmitter = emitonoff();
+  const DUMMY_NAME_SPACE = "_";
+  const _ = DUMMY_NAME_SPACE;
+  const subscribers = [];
+  const subscribeFn = function(f) {
+    return (subscribers.push(f), eventEmitter.on(_, f))
+  }
+
+  return {
+    subjectFactory: () => ({
+      next: x => eventEmitter.emit(_, x),
+      complete: () => subscribers.forEach(f => eventEmitter.off(_, f)),
+      subscribe: subscribeFn
+    }),
+    // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
+    // for a standard event emitter, there is not really an error channel...
+    subscribe: (observable, observer) => observable.subscribe(observer.next)
+  }
+};
 
 // Test framework helpers
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
