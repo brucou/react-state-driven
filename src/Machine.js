@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { NO_OUTPUT } from "state-transducer";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER,
-  COMPLETE_STAGE, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL
+  COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL
 } from "./properties";
 import Penpal from "penpal";
 import { identity, logAndRethrow, tryCatch } from "./helpers";
@@ -131,45 +131,50 @@ export class Machine extends Component {
     super(props);
     this.state = { render: null };
     this.rawEventSource = null;
-    this.connection = null;
     this.debugEmitter = null;
     this.subscription = null;
+    this.finalizeDebugEmitter = null;
   }
+
+  // TODO : put the renderWith as a child <Machine> <Gallery/> </Machine> in new version. Not now because would have to
+  // handle fragments (props.children can have more than one element)
+  // TODO : do that, adjust codesandbox and react-movie-app-state-driven-bis and release 1.0
+  // TODO : error flows to handle also -> pass to the debug emitter!!
 
   componentDidMount() {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
 
-    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith }
+    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, children }
       = machineComponent.props;
+    // Two cases a priori :
+    // - only one Element
+    // - only one Fragment with several element
+    // TODO: in later version, error if children.length > 1
+    const renderWith = children[0];
     const initialEvent = options && options.initialEvent;
-    const debug = options && options.debug;
+    const debug = options && options.debug || null;
+    const traceFactory = debug && debug.traceFactory || null;
+    const console = debug && debug.console || emptyConsole;
     // Wrapping the user-provided API with tryCatch to detect error early
     const wrappedEventHandlerAPI = {
       subjectFactory: tryCatch(
         eventHandler.subjectFactory,
         logAndRethrow(debug, EVENT_HANDLER_API_SUBJECT_FACTORY_ERR)
-      ),
-      subscribe: tryCatch(eventHandler.subscribe, logAndRethrow(debug, EVENT_HANDLER_API_SUBSCRIBE_ERR))
+      )
     };
     const wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
     // DOC : a subject factory returns a subject which has {next, error, complete} signature
     // subscribe is a function which takes an observable and an observer and returns a subscription
     // a subject should also be possible to use as argument to subscribe
-    const { subjectFactory, subscribe } = wrappedEventHandlerAPI;
+    const { subjectFactory } = wrappedEventHandlerAPI;
     this.rawEventSource = subjectFactory();
     const next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
 
-    const { debugEmitter, connection, console } =
-      debug && debug.debugEmitter
-        ? Object.assign(setDebugEmitter(wrappedEventHandlerAPI, Penpal), { console: debug.console })
-        : debug
-        ? { debugEmitter: null, connection: null, console: debug.console }
-        : { debugEmitter: null, connection: null, console: null };
-
     // We need internal references for cleaning up purposes
-    this.connection = connection;
-    this.debugEmitter = debugEmitter;
+    const {constructor, destructor} = traceFactory;
+    const debugEmitter = this.debugEmitter = constructor();
+    this.finalizeDebugEmitter = destructor;
 
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(next, params, effectHandlersWithRender) {
@@ -186,8 +191,7 @@ export class Machine extends Component {
       this.rawEventSource
     );
 
-    this.subscription = subscribe(
-      preprocessedEventSource, {
+    this.subscription = preprocessedEventSource.subscribe({
         next: event => {
           // 1. Run the input on the machine to obtain the actions to perform
           debugEmitter && debugEmitter.next({ stage: FSM_INPUT_STAGE, value: event });
@@ -253,9 +257,9 @@ export class Machine extends Component {
   // DOC:  debug emitter must have subject interface i.e.e same as subject factory returns
   componentWillUnmount() {
     this.subscription.unsubscribe();
-    this.debugEmitter && this.debugEmitter.complete();
     this.rawEventSource.complete();
-    this.connection && this.connection.destroy();
+    this.debugEmitter && this.debugEmitter.complete();
+    this.finalizeDebugEmitter();
   }
 
   render() {

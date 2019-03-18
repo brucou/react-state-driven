@@ -26,3 +26,4 @@ export const COMPLETE_STAGE = 'COMPLETE_STAGE';
 
 export const IFRAME_CONNECT_TIMEOUT = 1000;
 export const IFRAME_DEBUG_URL = '???';
+export const emptyConsole = { log: noop, warn: noop, info: noop, debug: noop, error: noop, trace: noop };

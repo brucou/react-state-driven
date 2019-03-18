@@ -35,7 +35,7 @@ const { div, a, ul, li, input, h1, h3, legend, img, dl, dt, dd } = hyperscript(h
 
 // TODO : update the trigger(..) for next({[eventName]: eventData}) - no preprocessor this time, I already did that
 // before, look for it. In ivi maybe??
-const screens = trigger => ({
+const screens = next => ({
   [LOADING_SCREEN]: () =>
     div(".App.uk-light.uk-background-secondary", { "data-active-page": "home" }, [
       div(".App__view-container", [
@@ -50,7 +50,7 @@ const screens = trigger => ({
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: "",
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -70,12 +70,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -93,7 +93,7 @@ const screens = trigger => ({
                         ".ResultsContainer__result-item.js-result-click",
                         {
                           href: "#",
-                          onClick: ev => trigger(MOVIE_SELECTED)(ev, result),
+                          onClick: ev => eventHandlersFactory(next)[MOVIE_SELECTED](ev, result),
                           "data-id": result.id
                         },
                         [
@@ -129,12 +129,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -156,12 +156,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -183,12 +183,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -205,7 +205,7 @@ const screens = trigger => ({
                       ".uk-margin-bottom",
                       {
                         key: result.id,
-                        onClick: ev => trigger(MOVIE_SELECTED)(ev, result)
+                        onClick: ev => eventHandlersFactory(next)[MOVIE_SELECTED](ev, result)
                       },
                       [
                         a(
@@ -243,7 +243,7 @@ const screens = trigger => ({
     ]),
   [SEARCH_RESULTS_WITH_MOVIE_DETAILS]: ({ results, query, details, cast }) =>
     div(".App.uk-light.uk-background-secondary", { "data-active-page": "item" }, [
-      div(".App__view-container", { onClick: trigger(MOVIE_DETAILS_DESELECTED) }, [
+      div(".App__view-container", { onClick: eventHandlersFactory(next)[MOVIE_DETAILS_DESELECTED] }, [
         div(".App__view.uk-margin-top-small.uk-margin-left.uk-margin-right", { "data-page": "home" }, [
           div(".HomePage", [
             h1([`TMDb UI – Home`]),
@@ -251,12 +251,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -274,7 +274,7 @@ const screens = trigger => ({
                         ".ResultsContainer__result-item.js-result-click",
                         {
                           href: "#",
-                          onClick: ev => trigger(MOVIE_SELECTED)(ev, result),
+                          onClick: ev => eventHandlersFactory(next)[MOVIE_SELECTED](ev, result),
                           "data-id": result.id
                         },
                         [
@@ -352,7 +352,7 @@ const screens = trigger => ({
     ]),
   [SEARCH_RESULTS_WITH_MOVIE_DETAILS_ERROR]: ({ results, query, title }) =>
     div(".App.uk-light.uk-background-secondary", { "data-active-page": "item" }, [
-      div(".App__view-container", { onClick: trigger(MOVIE_DETAILS_DESELECTED) }, [
+      div(".App__view-container", { onClick: eventHandlersFactory(next)[MOVIE_DETAILS_DESELECTED] }, [
         div(".App__view.uk-margin-top-small.uk-margin-left.uk-margin-right", { "data-page": "home" }, [
           div(".HomePage", [
             h1([`TMDb UI – Home`]),
@@ -360,12 +360,12 @@ const screens = trigger => ({
             div(".SearchBar.uk-inline.uk-margin-bottom", [
               a(".uk-form-icon.uk-form-icon-flip.js-clear", {
                 "uk-icon": query.length > 0 ? "icon:close" : "icon:search",
-                onClick: trigger(QUERY_RESETTED)
+                onClick: eventHandlersFactory(next)[QUERY_RESETTED]
               }),
               input(".SearchBar__input.uk-input.js-input", {
                 type: "text",
                 value: query,
-                onChange: trigger(QUERY_CHANGED),
+                onChange: eventHandlersFactory(next)[QUERY_CHANGED],
                 "data-testid": QUERY_FIELD_TESTID
               })
             ]),
@@ -383,7 +383,7 @@ const screens = trigger => ({
                         ".ResultsContainer__result-item.js-result-click",
                         {
                           href: "#",
-                          onClick: ev => trigger(MOVIE_SELECTED)(ev, result),
+                          onClick: ev => eventHandlersFactory(next)[MOVIE_SELECTED](ev, result),
                           "data-id": result.id
                         },
                         [
@@ -419,3 +419,11 @@ export function MovieSearch(props) {
 
   return screens(next)[screen](props);
 }
+
+// TODO: include
+const eventHandlersFactory = next => ({
+  [QUERY_CHANGED]: ev => next({ [QUERY_CHANGED]: ev.target.value }),
+  [QUERY_RESETTED]: ev => next({ [QUERY_CHANGED]: "" }),
+  [MOVIE_SELECTED]: (ev, result) => next({ [MOVIE_SELECTED]: { movie: result } }),
+  [MOVIE_DETAILS_DESELECTED]: ev => next({ [MOVIE_DETAILS_DESELECTED]: void 0 })
+});
