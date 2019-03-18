@@ -2,7 +2,8 @@ import React, { Component } from "react";
 import { NO_OUTPUT } from "state-transducer";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER,
-  COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT, IFRAME_DEBUG_URL
+  COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT,
+  IFRAME_DEBUG_URL, noop
 } from "./properties";
 import { identity, logAndRethrow, tryCatch } from "./helpers";
 
@@ -153,7 +154,7 @@ export class Machine extends Component {
     const renderWith = children[0];
     const initialEvent = options && options.initialEvent;
     const debug = options && options.debug || null;
-    const traceFactory = debug && debug.traceFactory || null;
+    const traceFactory = debug && debug.traceFactory || {};
     const console = debug && debug.console || emptyConsole;
     // Wrapping the user-provided API with tryCatch to detect error early
     const wrappedEventHandlerAPI = {
@@ -172,8 +173,8 @@ export class Machine extends Component {
 
     // We need internal references for cleaning up purposes
     const {constructor, destructor} = traceFactory;
-    const debugEmitter = this.debugEmitter = constructor();
-    this.finalizeDebugEmitter = destructor;
+    const debugEmitter = this.debugEmitter = (constructor || noop)();
+    this.finalizeDebugEmitter = destructor || noop;
 
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(next, params, effectHandlersWithRender) {
