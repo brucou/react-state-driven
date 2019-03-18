@@ -1,5 +1,6 @@
 import { NO_OUTPUT } from "state-transducer";
 
+export const noop = () => {};
 export const CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE = `Model update function must return valid update operations!`;
 export const ERR_COMMAND_HANDLERS = command => (`Cannot find valid executor for command ${command}`)
 export const COMMAND_RENDER = 'render';

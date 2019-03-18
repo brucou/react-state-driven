@@ -3,7 +3,7 @@
   "name": "react-state-driven",
   "sideEffects": false,
   "author": "brucou",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "license": "MIT",
   "description": "A state machine abstraction for React",
   "main": "dist/react-state-driven.js",
