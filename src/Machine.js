@@ -411,8 +411,7 @@ export function testMachineComponent(testAPI, testScenario, machineDef) {
 function assertPropsContract(props) {
   const { fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options } = props;
   if (!eventHandler) throw new Error(`<Machine/> : eventHandler prop has a falsy value!`);
-  const { subjectFactory, subscribe } = eventHandler;
+  const { subjectFactory } = eventHandler;
   if (!subjectFactory) throw new Error(`<Machine/> : subjectFactory prop has a falsy value!`);
-  if (!subscribe) throw new Error(`<Machine/> : subscribe prop has a falsy value!`);
   if (!fsm) throw new Error(`<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`);
 }
