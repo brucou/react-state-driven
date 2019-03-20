@@ -17,99 +17,6 @@ const PREPROCESSOR_EXEC_ERR = `An error occurred while executing the preprocesso
 const FSM_EXEC_ERR = `An error occurred while executing the state machine configured for your <Machine/> component!`;
 const SIMULATE_INPUT_ERR = `An error occurred while simulating inputs when testing a <Machine/> component!`;
 
-function flattenStreamOfArrays(streamAPI) {
-  return streamAPI.concatMap(arr =>
-    streamAPI.create(o => {
-      arr.forEach(val => o.next(val));
-      o.complete();
-    })
-  );
-}
-
-// TODO : write that with subscribe and compose
-// TODO : might have to write a concatMap transducer...
-function setDebugEmitter(eventHandler, Penpal) {
-  const { subjectFactory, next, error, complete, subscribe, transduce } = eventHandler;
-  const debugEmitter = subjectFactory();
-  const connection = Penpal.connectToChild({
-    timeout: IFRAME_CONNECT_TIMEOUT,
-    // TODO : url
-    // URL of page to load into iframe.
-    url: IFRAME_DEBUG_URL,
-    // Container to which the iframe should be appended.
-    appendTo: document.body,
-    // Methods parent is exposing to child
-    methods: {}
-  });
-  // NOTE : we are not using `scan` to reduce the API footprint, and do it through ugly closures
-  // We could do the messaging logic with a state machine, but we do not want to load up 8Kb for such
-  // a simple logic
-  let isFrameReady = false;
-  let isChildReadyToReceive = true;
-  let childPendingToSend = [];
-  let child = null;
-  let buffer = [];
-
-  connection.promise.then(_child => {
-    (isFrameReady = true), (child = _child);
-  });
-  debugEmitter
-  // TODO : change that to a single obseervable.create, that is all I need
-    .pipe(
-      map(val => {
-        if (isFrameReady && buffer.length !== 0) {
-          // Empty the buffer
-          const copiedBuffer = buffer.slice(0);
-          buffer = [];
-          return copiedBuffer;
-        } else if (isFrameReady && buffer.length === 0) {
-          return [val];
-        } else if (!isFrameReady) {
-          buffer.push(val);
-          return null;
-        }
-      }),
-      filter(Boolean),
-      // NOTE : trick to flatten the array of actions into the stream
-      // while still keeping order of execution of actions
-      flattenStreamOfArrays(eventHandler),
-      map(val => {
-        if (isChildReadyToReceive && childPendingToSend.length !== 0) {
-          // Empty the buffer
-          const copiedBuffer = childPendingToSend.slice(0);
-          childPendingToSend = [];
-          return copiedBuffer;
-        } else if (isChildReadyToReceive && childPendingToSend.length === 0) {
-          return [val];
-        } else if (!isChildReadyToReceive) {
-          childPendingToSend.push(val);
-          return null;
-        }
-      }),
-      filter(Boolean),
-      flattenStreamOfArrays(eventHandler),
-      // NOTE : simulates tap(fn) or do(fn), without having to require the function in the API
-      concatMap(val => {
-        isChildReadyToReceive = false;
-        return child.receive(val);
-      })
-    )
-    .subscribe(
-      wellReceived => {
-        isChildReadyToReceive = true;
-      },
-      error => {
-        isChildReadyToReceive = true;
-        console.error(`Machine > componentDidMount > debug emitter :`, error);
-      },
-      () => {
-        isChildReadyToReceive = true;
-      }
-    );
-
-  return { debugEmitter, connection };
-}
-
 const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState(
     { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
@@ -145,13 +52,8 @@ export class Machine extends Component {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
 
-    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, children }
+    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith}
       = machineComponent.props;
-    // Two cases a priori :
-    // - only one Element
-    // - only one Fragment with several element
-    // TODO: in later version, error if children.length > 1
-    const renderWith = children[0];
     const initialEvent = options && options.initialEvent;
     const debug = options && options.debug || null;
     const traceFactory = debug && debug.traceFactory || {};
@@ -172,8 +74,8 @@ export class Machine extends Component {
     const next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
 
     // We need internal references for cleaning up purposes
-    const {constructor, destructor} = traceFactory;
-    const debugEmitter = this.debugEmitter = (constructor || noop)();
+    const {factory, destructor} = traceFactory;
+    const debugEmitter = this.debugEmitter = (factory || (x => null))();
     this.finalizeDebugEmitter = destructor || noop;
 
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
