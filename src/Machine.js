@@ -43,10 +43,12 @@ export class Machine extends Component {
     this.finalizeDebugEmitter = null;
   }
 
-  // TODO : put the renderWith as a child <Machine> <Gallery/> </Machine> in new version. Not now because would have to
-  // handle fragments (props.children can have more than one element)
-  // TODO : do that, adjust codesandbox and react-movie-app-state-driven-bis and release 1.0
+  // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
+  // When passed as part of a `props.children`, the function component would be transformed into a react element
+  // and hence can no longer be used. We do not want the react element, we want the react element factory...
+  // It is thereforth necessary to pass the render component as a property
   // TODO : error flows to handle also -> pass to the debug emitter!!
+  // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
 
   componentDidMount() {
     const machineComponent = this;
@@ -170,6 +172,7 @@ export class Machine extends Component {
   }
 }
 
+// @deprecated
 // TODO : harmonize the two adapters naming
 export const getStateTransducerRxAdapter = RxApi => {
   const { Subject } = RxApi;
@@ -182,6 +185,7 @@ export const getStateTransducerRxAdapter = RxApi => {
   };
 };
 
+// @deprecated
 export const emitonoffAdapter = emitonoff => {
   const eventEmitter = emitonoff();
   const DUMMY_NAME_SPACE = "_";
@@ -199,6 +203,7 @@ export const emitonoffAdapter = emitonoff => {
     }),
     // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
     // for a standard event emitter, there is not really an error channel...
+    // TODO : take emitter from movie search app instead : API changed!!
     subscribe: (observable, observer) => observable.subscribe(observer.next)
   }
 };
