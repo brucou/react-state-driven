@@ -256,4 +256,3 @@ export function normalizeHTML(str) {
   return stringify(result.children);
 }
 
-

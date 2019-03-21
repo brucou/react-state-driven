@@ -1,5 +1,32 @@
 // TODO : test actions are run in order..
-- have the demo work again in react-app-simple? bump the version
+- test with renderWith, only factory and subscribe, latest of state transducer, initial event, 
+movie search app
+- DOC!!
+- incorporate in codesandbox AND demoboard link for article then PUBLISH the motherfucking article
+  - idea is stat machine will be the same among all ui libraries
+- try with initial control state and new version of state transducer
+- UPDATE README! clean code. new article will send lots of people
+- when finished, update state transducer to remove the event handler library of options! cf code 
+TODOs
+  - actually might even have meta data in observe and subject interface (give it a name for 
+  tracing?)
+  - if no eventHandler passed, then use internal event handling library which is just 
+  eventEmitter and listeners. Then leave transducers out
+  - make preprocessor an object :
+    - {rawEvent : (rawEventData, ref) => ...}
+  - if not a function then use the object format
+- do a test generation library also for testing the FSM cd. movie-search-app, for now I only 
+generate the inputs
+- then do a library also for running the tests in DOM real browser 
+- include this as observable library in connection with the event emitter : 4 Kb all included!!! 
+and that means all operators which can be tree shaken -- and performant!!
+- have a rollup config for min and one without, and add source map
+- write same movie search app for hyperHTML, svelte and angular!
+- change API to have observable, observer, and pipe API for event handler!!
+  - change subject API to next instead of `emit`, this is observable standard
+- update demo code
+- make a esm version of penpal to decrease size (right now I import the whole thing...)
+- in demos, add options with initial event [INIT_EVENT, 0] cf. ipage_gallery_component_spcs
 - update README with nice drawing 
   - event seq. => input seq. => fsm => output seq. => assertion seq.
   - graphs about controller vs. mediator
@@ -171,3 +198,18 @@ trigger call
 OK for now, it seems `flex layout` is what we need. This is the closest to webstorm window system
 . React-Grid-Layout seems the most user friendly slick but it would be necessary to customize a 
 lot to add features (tabs, border handles) in a slick way. 
+
+# API subject + transducer
+- try catch and error processing
+- write adapter for event emitter
+  - beware of error and completion semantics: should I close the subscription a la rxjs?? 
+  to think about 
+- in example, I will have to write flatMapLatest myself!
+- DOCs!!
+- will have to write concatMap also as transducer... mmm will be concatMapPromise
+
+In order:
+- make it work with Rx with the machine example without flatMapLatest
+- add flatMapLatest
+- make it work with event emitter
+- do try catch error processing

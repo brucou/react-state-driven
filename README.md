@@ -103,17 +103,16 @@ There are more benefits but this is not the place to go about them. Cf:
 - [Pure UI](https://rauchg.com/2015/pure-ui)
 - [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
 
-{^3]: Command handlers can only perform effects internally (for instance async. communication 
+[^3]: Command handlers can only perform effects internally (for instance async. communication 
 with the mediator)    
 [^2]: In relation with state machines, it is the same to say that 
       an output depends exclusively on past and present inputs and that an output exclusively depends 
-      on current state, and present input.
-{^1]: Another term used elsewhere is *deterministic* functions, but we 
+      on current state, and present input.    
+[^1]: Another term used elsewhere is *deterministic* functions, but we 
       found that term could be confusing.          
 
 # Installation
 > `react`  is a peer dependency.
-> `sinon` should be imported if one wants to use the testing API
 
 ```sh
 npm install react-state-driven
@@ -407,10 +406,11 @@ input `{SEARCH_SUCCESS: items}`.
 
 Note that we are using `switchMap` from our event processing library to handle for us the 
 concurrency issues related to outdated requests (i.e. cancelled requests whose 
-response nevertheless arrive). We could handle that in the state machine but we
- do it here, as it otherwise complicates needlessly the machine.
+responses nevertheless arrive). We could handle that in the state machine but we
+ do it here, as we prefer to remove concurrency concerns from the machine (this is obviously as 
+ subjective as it gets; it would also be fine to handle the concurrent requests in the machine).
 
-Note that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
+Note also that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
 which must be used immediately before render (`flipping.read()`), and immediately after render 
 (`flipping.flip()`). 
 
@@ -1060,7 +1060,7 @@ flickr endpoint. We could have mocked the request execution (say `fetchJsonp`), 
 In our image gallery example, it goes like this : 
 
 ```javascript
-export const imageGallerySwitchMap = {
+export const imageGallery = {
 (...)
   effectHandlers: { runSearchQuery },
   commandHandlers: {

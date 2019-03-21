@@ -90,7 +90,9 @@ export class GalleryApp extends React.Component {
   }
 
   render() {
-    const { query, photo, items, trigger, gallery: galleryState } = this.props;
+    const { query, photo, items, next, gallery: galleryState } = this.props;
+
+    const trigger = triggerFnFactory({next});
 
     return div(".ui-app", { "data-state": galleryState }, [
       h(Form, { galleryState, onSubmit: trigger("onSubmit"), onClick: trigger("onCancelClick") }, []),
@@ -98,4 +100,15 @@ export class GalleryApp extends React.Component {
       h(Photo, { galleryState, photo, onClick: trigger("onPhotoClick") }, [])
     ]);
   }
+}
+
+export function triggerFnFactory(rawEventSource) {
+  return rawEventName => {
+    // DOC : by convention, [rawEventName, rawEventData, ref (optional), ...anything else]
+    // DOC : rawEventData is generally the raw event passed by the event handler
+    // DOC : `ref` here is :: React.ElementRef and is generally used to pass `ref`s for uncontrolled component
+    return function eventHandler(...args) {
+      return rawEventSource.next([rawEventName].concat(args));
+    };
+  };
 }

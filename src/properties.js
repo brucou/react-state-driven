@@ -1,15 +1,23 @@
 import { NO_OUTPUT } from "state-transducer";
 
+export const noop = () => {};
 export const CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE = `Model update function must return valid update operations!`;
 export const ERR_COMMAND_HANDLERS = command => (`Cannot find valid executor for command ${command}`)
 export const COMMAND_RENDER = 'render';
 export const NO_STATE_UPDATE = [];
-export const BUTTON_CLICKED = 'button_clicked';
-export const KEY_PRESSED = 'key_pressed';
-export const INPUT_KEY_PRESSED = 'input_key_pressed';
-export const ENTER_KEY_PRESSED = 'enter_key_pressed';
-export const INPUT_CHANGED = 'input_changed';
 export const NO_ACTIONS = () => ({ outputs: NO_OUTPUT, updates: NO_STATE_UPDATE });
-export const KEY_ENTER = `Enter`;
-export const NO_INTENT = null;
 export const COMMAND_SEARCH = 'command_search';
+
+export const PREPROCESSOR_INPUT_STAGE = 'PREPROCESSOR_INPUT_STAGE ';
+export const FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';
+export const FSM_OUTPUT_STAGE = 'FSM_OUTPUT_STAGE';
+export const GLOBAL_COMMAND_HANDLER_INPUT_STAGE = 'GLOBAL_COMMAND_HANDLER_INPUT_STAGE';
+export const COMMAND_HANDLERS_OUTPUT_STAGE = 'COMMAND_HANDLERS_OUTPUT_STAGE';
+export const COMMAND_HANDLER_INPUT_STAGE = 'COMMAND_HANDLER_INPUT_STAGE';
+export const COMMAND_HANDLER_OUTPUT_STAGE = 'COMMAND_HANDLER_OUTPUT_STAGE';
+export const ERROR_STAGE = 'ERROR_STAGE';
+export const COMPLETE_STAGE = 'COMPLETE_STAGE';
+
+export const IFRAME_CONNECT_TIMEOUT = 1000;
+export const IFRAME_DEBUG_URL = '???';
+export const emptyConsole = { log: noop, warn: noop, info: noop, debug: noop, error: noop, trace: noop };
