@@ -2,8 +2,7 @@ import React, { Component } from "react";
 import { NO_OUTPUT } from "state-transducer";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER,
-  COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, IFRAME_CONNECT_TIMEOUT,
-  IFRAME_DEBUG_URL, noop
+  COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, noop
 } from "./properties";
 import { identity, logAndRethrow, tryCatch } from "./helpers";
 
@@ -49,6 +48,9 @@ export class Machine extends Component {
   // It is thereforth necessary to pass the render component as a property
   // TODO : error flows to handle also -> pass to the debug emitter!!
   // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
+  // TODO : write tests with MovieSearch and also for debug emitter??
+  // TODO:  do a rx adapter, and test it with startWith
+  // TODO : then DOC everything, the API won't change
 
   componentDidMount() {
     const machineComponent = this;
