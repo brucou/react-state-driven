@@ -30,7 +30,7 @@ This document is structured as follows :
 - we quickly present the rationale behind modelling user interfaces with state machines and the 
 resulting architecture
 - we continue with our API design goals
-- we finally explain and document the actual API together with a not-so-trivial example of use, 
+- we finally explain and document the actual API together with a [simple example](#example) of use, 
 taken from other similar libraries
 
 # Modelling user interfaces with state machines
