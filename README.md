@@ -77,7 +77,8 @@ exhibit the same property[^1]. The causality property means state machines are a
 testing, tracing and debugging 
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
- instance, we use in our implementation `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
+ instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`]
+ (https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
    [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
     if the need be, by simply building interface adapters.
 
@@ -267,7 +268,7 @@ logic, we extract it into the `entryActions` property and we will use later the 
 
 That was for encoding the behaviour of our user interface. We now have to encode our user 
 interface as a React component. As we will use the `<Machine />` component, we only have to 
-specify the corresponding *props* :
+specify the corresponding *props* for it:
 
 ```javascript
 import { COMMAND_RENDER, COMMAND_SEARCH, NO_INTENT } from "./properties"
@@ -326,7 +327,6 @@ export const imageGalleryReactMachineDef = {
         return NO_INTENT;
       }),
       filter(x => x !== NO_INTENT),
-      startWith({ START: void 0 })
     ),
   commandHandlers: {
     [COMMAND_SEARCH]: (next, query, effectHandlers) => {
@@ -428,13 +428,15 @@ const fsm = createStateMachine(fsmSpecsWithEntryActions, {
 });
 
 ReactDOM.render(
+  // That is the same as <Machine fsm=... preprocessor=... ... />
   h(Machine, Object.assign({}, imageGalleryReactMachineDef, { fsm }), []),
   document.getElementById("root")
 );
 
 ```
  
-Now let's explain a bit what is going on here. 
+Alright, now let's leverage the example to explain what is going on here together with the 
+`<Machine />` semantics.
 
 First of all, we use `React.createElement` but you 
 could just as well use jsx `<Machine ... />`, that really is but an implementation detail. In our
@@ -448,8 +450,6 @@ interface. The outputs from the machine are commands representing what commands/
 on the interfaced system(s). The mapping between user/system events and machine input is 
 performed by `preprocessor`. The commands output  by the machine are mapped to handlers gathered 
 in `commandHandlers` so our `Machine`  component knows how to run a command when it receives one.
- `componentWillUpdate` and `componentDidUpdate` are overriding default behaviour of the eponym 
- lifecycle hooks for the `Machine` component. 
 
 A run of the machine would then be like this :
 - The machine will encapsulate the following properties as part of its extended state : `query`, 
@@ -459,20 +459,9 @@ function of the input received by the machine and the control state the machine 
 - The machine transitions automatically from the initial state to the `start` control state.
   - on doing so, it issues one command : render `GalleryApp`. Render commands have a default 
   handler which renders the `React.Element` passed as parameter. That element can be computed 
-  from the extended state of the state machine and the event data. An event emitter (here `trigger`)
-   is passed to allow for the element to send events to the state machine : 
-```javascript
-  export function renderAction(params) {
-    return { outputs: { command: COMMAND_RENDER, params }, updates: NO_STATE_UPDATE }
-  }
-  export function renderGalleryApp(galleryState) {
-    return (extendedState, eventData, fsmSettings) => {
-      const { query, items, photo } = extendedState;
-  
-      return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: galleryState }, []));
-    }
-  }
-```
+  from the extended state of the state machine and the event data. An event emitter (`next` in 
+  code sample above)
+   is passed to allow for the element to send events to the state machine.
 - The `Machine` component executes the render command and renders a gallery app with an
    empty query text input, no images(`items`), and no selected image (`photo`).
 - The user enters some text in the text input
@@ -493,67 +482,41 @@ input `{SEARCH_SUCCESS: items}`.
   - the user or an interfaced system (network, etc.) triggers an event X,
   - that event will be transformed into a machine input (as per `preprocessor`), 
   - the machine will, as per its specs, update its extended state and issue command(s) 
-  - Issued command will be executed by the `Machine` component, as per `commandHandlers`
-
-Note that we are using `switchMap` from our event processing library to handle for us the 
-concurrency issues related to outdated requests (i.e. cancelled requests whose 
-responses nevertheless arrive). We could handle that in the state machine but we
- do it here, as we prefer to remove concurrency concerns from the machine (this is obviously as 
- subjective as it gets; it would also be fine to handle the concurrent requests in the machine).
-
-Note also that we use here the two mentioned React lifecycle hooks, as we are using the [`Flipping`](https://github.com/davidkpiano/flipping) animation library. This library exposes a `flip` API 
-which must be used immediately before render (`flipping.read()`), and immediately after render 
-(`flipping.flip()`). 
+  - Issued commands will be executed by the `Machine` component, as per `commandHandlers`
 
 This is it! Whatever the machine passed as parameter to the `Machine` component, its behaviour 
 will always be as described.
 
+Note that this example is contrived for educational purposes:
+- we could do away with the preprocessor and have the DOM event handlers directly produce inputs in 
+the format accepted by the machine
+- we could handle concurrency issues (user makes a second search while the first search request 
+is in-flight) either reusing rxjs capabilities (`switchMap`) or at the machine level (extra piece
+ of state)
+
 ### Types
 Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
-
-Let's just say here that adapting an event processing library is the most complicated to 
-interface. Here is for example a Rxjs adapter used for the demo with `react-state-driven` :
-
-```javascript
-import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
-import { filter, flatMap, map, shareReplay, startWith } from "rxjs/operators";
-
-const stateTransducerRxAdapter = {
-  // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
-  subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
-  merge: merge,
-  create: fn => Observable.create(fn),
-  startWith : startWith,
-  filter: filter,
-  map: map,
-  flatMap: flatMap,
-  shareReplay: shareReplay
-};
-
-```
+**TODO: I AM HERE**: review the types, republish with pika
 
 ### Contracts
 - command handlers delegate **all effects on external systems** through the effect handler module
-- the `[COMMAND_RENDER]` command is reserved and must not be used in the command handlers' 
-specifications  
+- the `COMMAND_RENDER` command is reserved and must not be used in the command handlers' 
+specifications
 - types contracts
-- the chosen machine instance must accept a predefined init event (`INIT_EVENT`). That event will be 
-sent when the `<Machine/>` component is first mounted (`componentDidMount` React lifecycle method). 
 
 ### Semantics
 - The `<Machine />` component :
-  - initializes the raw event source (subject) which which receives and forward all raw events 
-  (user  events and  system events), and the event emitter emitting on it
-  - create a global command handler to dispatch to lower-level command handler
+  - initializes the raw event source (subject) which receives and forwards all raw events 
+  (user events and system events)
+  - creates a global command handler to dispatch to user-defined command handlers
   - connects the raw event source to the preprocessor
   - connects the preprocessor to the machine
   - connects the machine to the command handler
-  - starts the machine : the machine is now reactive to raw events and computes the 
-  associated commands
+  - starts the machine: the machine is now reactive to raw events and computes the associated commands
 - The preprocessor will receive raw events from two sources : the user interface and the external
  systems (databases, etc.). From raw events, it will compute inputs for the connected state 
- machine. Note that :
-  - the preprocessor may perform effects only on the user interface (for instance `e => e.preventDefault()`
+ machine. Note that:
+  - the preprocessor may perform effects only on the user interface (for instance `e => e.preventDefault()`)
   - the preprocessor may have its own internal state
 - The machine receives preprocessed events from the preprocessor and computes a set of commands 
 to be executed
@@ -561,23 +524,19 @@ to be executed
   - if the command is a render command, the global handler execute directly the command in the 
   context of the `<Machine/>` component
   - if the command is not a render command, the global handler dispatches the command to the 
-  preconfigured command handlers
+  user-configured command handlers
 - All command handlers are passed two arguments : 
-  - an observable containing 
-    - the raw event source emitter, so they can send back events, 
-    - the `params` property of commands to be processed by the handler
+  - an event emitter connected to the raw event source
   - an object of type `EffectHandlers` which contains any relevant dependencies needed to 
   perform effects (that is the object passed in props to the `<Machine/>` component)
-- Render commands leads to definition of React components with event handlers. Those event 
-  handlers can pass their raw events to the machine thanks to the raw event source emitter
+- Render commands leads to definition of React components with DOM event handlers. Those event 
+  handlers can pass their raw events (DOM events) to the machine thanks to the raw event source 
+  emitter
 - Non-render commands leads to the execution of procedures which may be successful or fail. The
-   command handler can pass back information to the machine thanks to the raw event source 
-   emitter.
-- The event source is created with the subject factory passed as parameters. That subject must 
-have the `next, complete, error` properties defined (`Observer` interface), the properties 
-`subscribe` defined (`Observable` interface), and at least five operators (`map`, `filter`, `flatMap`, 
-`startWith`, `shareReplay`). Rx from `Rxjs` is a natural choice, but other reactive libraries can be 
-easily adapted, including standard simple event emitters or callbacks.
+   command handler can pass back information to the machine thanks to the injected event emitter. 
+- The raw event source is created with the subject factory passed as parameters. That subject must 
+implement the `Observer` interface (in particular have the `next, complete, error` properties 
+defined) and the `Observable` interface (`subscribe` property)
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
