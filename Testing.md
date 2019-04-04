@@ -1,3 +1,84 @@
+## `testMachineComponent(testAPI, testScenario, machineDefinition)`
+### Description
+The `testMachineComponent` function runs a set of test cases on a React `<Machine/>` component 
+which wraps around an underlying state machine defining its behaviour. The tests are run entirely
+ in the browser. The test framework is QUnit for the test runs, and `react-testing-library` for 
+ handling the React component.
+
+A test case is an input sequence, and a matching expected output sequence. The input sequence is 
+a ordered set of inputs for the underlying state machine, and the matching output sequence is the
+ outputs of the machine corresponding to the input sequence. Because any underlying state machine
+  will always produce an output for any given input, input sequence and output sequence have the 
+  same length, and given an index `i`, the output at index `i` is the output of the machine for 
+  the input sequence at index `i`. Lastly, we remind that the state machine outputs **array of 
+  values** for each input it receives.
+
+This implicitly means that tests for the underlying state machine are reused for the `<Machine/>` 
+component, which in turn means that the underlying state machine has to be tested first, and then
+ the React component.
+
+Because input sequences and output sequences are with respect to the underlying state machine, they
+ have to be converted to :
+
+- event sequences which represent/simulate the actions of a user on the user interface, or the 
+ events received by the React component by interfaced systems
+- assertion sequences which check that the simulated event has the expected effect.
+
+Because we are unit-testing, we do not want to perform effects on the interfaced 
+systems (other than the user acting on the user interface), and as a result, a the 
+`testMachineComponent` function incorporates a mocking mechanism.
+
+Finally, we run the test in the browser, with actual display of the component in the browser in 
+order to facilitate debugging activities. As a result, it is necessary to provide an anchoring 
+DOM element to display the component.  
+
+In short, the testing methodology can be summarized as follows:
+
+```ejs
+Fsm testing : input seq. => fsm (black box) => output seq.
+
+Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output seq.)
+```
+
+
+### Types
+In the frame of testing with QUnit, and `react-testing-library`, which are the hypothesis for 
+this function, testAPI is fixed and must be :
+
+```javascript
+import * as rtl  from "react-testing-library";
+
+const testAPI = {
+  test: QUnit.test.bind(QUnit),
+  rtl
+};
+```
+
+For the definition of `MachineDefinition`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/blob/master/types/react-fsm-integration.js)
+
+### Contracts
+- input sequence and output sequence have same length
+- output sequence = state machine run (input sequence)
+- type contracts
+
+### Semantics
+For each test case/input sequence :
+
+- the fsm under test is created with mocked effect handlers
+  - using the `mockedEffectHandlers`, `mockedMachineFactory`, `machineDef`, `mocks` properties 
+  passed with the parameters
+- for each input in the input sequence :
+  - the corresponding event is computed and run
+    - as deduced from the `when` property of `testScenario`
+    - the `when` function is passed all the data necessary for it to perform its function, cf. types
+  - the corresponding assertion is computed and chained to the previous event simulation
+    - as deduced from the `then` property of `testScenario`
+    - the `then` function is passed all the data necessary for it to perform its function, cf. types
+    - event simulations returning promises are chained seamlessly
+  - errors are caught and logged both in the console and in the QUnit reporter (tests are not interrupted)
+      
+After each test case, the DOM anchor is emptied (`React.render(null, ...)`).
+
 # Testing
 As we mentioned previously, the `<Machine/>` mediator is made from the monadic composition of four 
 configurable units : `event handler -> preprocessor -> state machine -> command handler`. 
