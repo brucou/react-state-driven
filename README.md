@@ -496,6 +496,7 @@ is in-flight) either reusing rxjs capabilities (`switchMap`) or at the machine l
 
 ### Types
 Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
+
 **TODO: I AM HERE**: review the types, republish with pika
 
 ### Contracts
@@ -541,6 +542,7 @@ defined) and the `Observable` interface (`subscribe` property)
 (`componentWillUnmount` lifecycle method)
 
 ## `testMachineComponent(testAPI, testScenario, machineDefinition)`
+**TODO: I AM HERE**: add examples of test for the search app
 ### Description
 The `testMachineComponent` function runs a set of test cases on a React `<Machine/>` component 
 which wraps around an underlying state machine defining its behaviour. The tests are run entirely
@@ -621,30 +623,6 @@ For each test case/input sequence :
       
 After each test case, the DOM anchor is emptied (`React.render(null, ...)`).
 
-## getStateTransducerRxAdapter(RxApi)
-
-```javascript
-import { filter, flatMap, map, shareReplay, switchMap } from "rxjs/operators";
-import { BehaviorSubject, merge, Observable } from "rxjs";
-
-export const getStateTransducerRxAdapter = RxApi => {
-  const { BehaviorSubject, merge, Observable, filter, flatMap, map, shareReplay } = RxApi;
-
-  return {
-    // NOTE : this is start the machine, by sending the INIT_EVENT immediately prior to any other
-    subjectFactory: () => new BehaviorSubject([INIT_EVENT, void 0]),
-    // NOTE : must be bound, because, reasons
-    merge: merge,
-    create: fn => Observable.create(fn),
-    filter: filter,
-    map: map,
-    flatMap: flatMap,
-    shareReplay: shareReplay
-  };
-};
-
-```
-
 # Tips and gotchas
 - If the configured state machine library has an initial event, it can be passed using a behavior
  subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
@@ -701,7 +679,7 @@ All demos from examples can be found in the [demo repository](https://github.com
 - uncontrolled form with ref
 - image search app
 
-
+**TODO: I AM HERE**: move testing to another README link, also explain better 
 # Testing
 As we mentioned previously, the `<Machine/>` mediator is made from the monadic composition of four 
 configurable units : `event handler -> preprocessor -> state machine -> command handler`. 

@@ -1,9 +1,7 @@
 // TODO : test actions are run in order..
 - NTH: options: event emitter property name (next by default) - so interface with renderWith can 
 be customized!
-- test with renderWith, only factory and subscribe, latest of state transducer, initial event, 
-movie search app
-- DOC!!
+- DOC!! procss all the DOC it notes in the code
 - incorporate in codesandbox AND demoboard link for article then PUBLISH the motherfucking article
   - idea is stat machine will be the same among all ui libraries
 - try with initial control state and new version of state transducer
