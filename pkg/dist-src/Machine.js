@@ -16,14 +16,16 @@ var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
 
 var PREPROCESSOR_EXEC_ERR = "An error occurred while executing the preprocessor configured for your <Machine/> component!";
 var FSM_EXEC_ERR = "An error occurred while executing the state machine configured for your <Machine/> component!";
-var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!";
+var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!"; // DOC efect handlers. the render handler can be changed with that signature
+// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
 
 var defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState({
     render: React.createElement(renderWith, Object.assign({}, params, {
       next: next
     }), [])
-  }, params.callback);
+  }, // TODO : DOC it
+  params.postRenderCallback);
 };
 /**
  * Class implementing a reactive system modelled by a state machine (fsm).
@@ -56,11 +58,10 @@ function (_Component) {
   } // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
   // When passed as part of a `props.children`, the function component would be transformed into a react element
   // and hence can no longer be used. We do not want the react element, we want the react element factory...
-  // It is thereforth necessary to pass the render component as a property
+  // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
   // TODO : error flows to handle also -> pass to the debug emitter!!
   // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
   // TODO : write tests with MovieSearch and also for debug emitter??
-  // TODO:  do a rx adapter, and test it with startWith
   // TODO : then DOC everything, the API won't change
 
 
@@ -104,7 +105,9 @@ function (_Component) {
       return null;
     })();
 
-    this.finalizeDebugEmitter = destructor || noop;
+    this.finalizeDebugEmitter = destructor || noop; // DOC: command render if present is replaced by the command handler from that library
+    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
+
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
@@ -208,16 +211,13 @@ function (_Component) {
 
   return Machine;
 }(Component); // @deprecated
-// TODO : harmonize the two adapters naming
+// TODO : harmonize the two adapters naming, copier from flickr-search-app
 
 export var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(RxApi) {
   var Subject = RxApi.Subject;
   return {
     subjectFactory: function subjectFactory() {
       return new Subject();
-    },
-    subscribe: function subscribe(observable, observer) {
-      return observable.subscribe(observer);
     }
   };
 }; // @deprecated
@@ -248,7 +248,7 @@ export var emitonoffAdapter = function emitonoffAdapter(emitonoff) {
     },
     // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
     // for a standard event emitter, there is not really an error channel...
-    // TODO : take emitter from movie search app instead : API changed!!
+    // TODO : take emitter from movie search app instead : API changed!! subscribe takes a {next, error, complete}
     subscribe: function subscribe(observable, observer) {
       return observable.subscribe(observer.next);
     }

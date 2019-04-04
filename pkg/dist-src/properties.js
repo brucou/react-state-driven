@@ -1,17 +1,7 @@
-import { NO_OUTPUT } from "state-transducer";
 export var noop = function noop() {};
 export var CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE = "Model update function must return valid update operations!";
-export var ERR_COMMAND_HANDLERS = function ERR_COMMAND_HANDLERS(command) {
-  return "Cannot find valid executor for command " + command;
-};
 export var COMMAND_RENDER = 'render';
 export var NO_STATE_UPDATE = [];
-export var NO_ACTIONS = function NO_ACTIONS() {
-  return {
-    outputs: NO_OUTPUT,
-    updates: NO_STATE_UPDATE
-  };
-};
 export var COMMAND_SEARCH = 'command_search';
 export var PREPROCESSOR_INPUT_STAGE = 'PREPROCESSOR_INPUT_STAGE ';
 export var FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';

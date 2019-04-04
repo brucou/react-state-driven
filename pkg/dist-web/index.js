@@ -4,12 +4,6 @@ import { NO_OUTPUT } from 'state-transducer';
 var noop = function noop() {};
 var COMMAND_RENDER = 'render';
 var NO_STATE_UPDATE = [];
-var NO_ACTIONS = function NO_ACTIONS() {
-  return {
-    outputs: NO_OUTPUT,
-    updates: NO_STATE_UPDATE
-  };
-};
 var FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';
 var FSM_OUTPUT_STAGE = 'FSM_OUTPUT_STAGE';
 var COMMAND_HANDLERS_OUTPUT_STAGE = 'COMMAND_HANDLERS_OUTPUT_STAGE';
@@ -26,29 +20,6 @@ var emptyConsole = {
   trace: noop
 };
 
-/**
- *
- * @param Component
- * @param {Object} [props={}]
- * @returns {RenderCommand}
- */
-
-function renderAction(params) {
-  return {
-    outputs: {
-      command: COMMAND_RENDER,
-      params: params
-    },
-    updates: NO_STATE_UPDATE
-  };
-}
-function destructureEvent(eventStruct) {
-  return {
-    rawEventName: eventStruct[0],
-    rawEventData: eventStruct[1],
-    ref: eventStruct[2]
-  };
-}
 function identity(x) {
   return x;
 }
@@ -95,14 +66,16 @@ var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
 
 var PREPROCESSOR_EXEC_ERR = "An error occurred while executing the preprocessor configured for your <Machine/> component!";
 var FSM_EXEC_ERR = "An error occurred while executing the state machine configured for your <Machine/> component!";
-var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!";
+var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!"; // DOC efect handlers. the render handler can be changed with that signature
+// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
 
 var defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState({
     render: React.createElement(renderWith, Object.assign({}, params, {
       next: next
     }), [])
-  }, params.callback);
+  }, // TODO : DOC it
+  params.postRenderCallback);
 };
 /**
  * Class implementing a reactive system modelled by a state machine (fsm).
@@ -135,11 +108,10 @@ function (_Component) {
   } // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
   // When passed as part of a `props.children`, the function component would be transformed into a react element
   // and hence can no longer be used. We do not want the react element, we want the react element factory...
-  // It is thereforth necessary to pass the render component as a property
+  // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
   // TODO : error flows to handle also -> pass to the debug emitter!!
   // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
   // TODO : write tests with MovieSearch and also for debug emitter??
-  // TODO:  do a rx adapter, and test it with startWith
   // TODO : then DOC everything, the API won't change
 
 
@@ -183,7 +155,9 @@ function (_Component) {
       return null;
     })();
 
-    this.finalizeDebugEmitter = destructor || noop;
+    this.finalizeDebugEmitter = destructor || noop; // DOC: command render if present is replaced by the command handler from that library
+    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
+
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
@@ -287,19 +261,6 @@ function (_Component) {
 
   return Machine;
 }(Component); // @deprecated
-// TODO : harmonize the two adapters naming
-
-var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(RxApi) {
-  var Subject = RxApi.Subject;
-  return {
-    subjectFactory: function subjectFactory() {
-      return new Subject();
-    },
-    subscribe: function subscribe(observable, observer) {
-      return observable.subscribe(observer);
-    }
-  };
-}; // @deprecated
 
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
   var effects = Object.keys(effectHandlers);
@@ -413,4 +374,4 @@ function assertPropsContract(props) {
   if (!fsm) throw new Error("<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!");
 }
 
-export { COMMAND_RENDER, Machine, NO_ACTIONS, NO_STATE_UPDATE, destructureEvent, getStateTransducerRxAdapter, renderAction, testMachineComponent };
+export { COMMAND_RENDER, Machine, NO_STATE_UPDATE, testMachineComponent };
