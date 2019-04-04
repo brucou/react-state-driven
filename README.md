@@ -60,8 +60,10 @@ effects to the effect handler when necessary
 - the mediator orchestrates the user interface, the preprocessor, the state machine and the command 
 handler
 
-While the architecture may appear more complex (isolating concerns means more parts), we have in 
-fact successfully increased the testability of our implementation :
+While the architecture may appear more complex (isolating concerns means more parts), we have 
+reduced the complexity born from the interconnection between the parts. 
+
+Concretely, we increased the testability of our implementation :
 - the mediator algorithm is the same independently of the pieces it coordinates. This means it 
 can be written and tested once, then reused at will. This is our `<Machine />` component. **This is
  glue code that you do not have to write and test anymore**
@@ -70,7 +72,7 @@ resource. That code is written and tested once (and comes generally tested out o
 then reused for any resource. Additionally, only the effect handlers can perform effects on the 
 external systems, which helps testing, tracing and debugging[^3]
 - effect handlers, being isolated in their own module, are easy to mock, without resorting to 
-a complex machinery
+a complex machinery specific to a testing library
 - the state machine is a function which **performs no effects**, and whose output exclusively depends 
 on current state, and present input[^2]. We will use the term *causal* functions for such 
 functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
@@ -84,7 +86,8 @@ We also have achieved greater modularity: our parts are coupled only through the
  instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`]
  (https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
    [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
-    if the need be, by simply building interface adapters.
+    if the need be, or to a barebone event emitter (like `emitonoff`) by simply building 
+    interface adapters.
 
 There are more benefits but this is not the place to go about them. Cf:
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
@@ -163,10 +166,10 @@ For illustration, the user interface starts like this :
 
 The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
 
-#### Encoding the machine graph
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.
 
+#### Encoding the machine graph
 The machine is translated into the data structure expected by the supporting `state-transducer` 
 library:
 
