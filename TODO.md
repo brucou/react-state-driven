@@ -1,4 +1,6 @@
 // TODO : test actions are run in order..
+- NTH: options: event emitter property name (next by default) - so interface with renderWith can 
+be customized!
 - test with renderWith, only factory and subscribe, latest of state transducer, initial event, 
 movie search app
 - DOC!!

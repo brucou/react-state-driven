@@ -16,10 +16,13 @@ const PREPROCESSOR_EXEC_ERR = `An error occurred while executing the preprocesso
 const FSM_EXEC_ERR = `An error occurred while executing the state machine configured for your <Machine/> component!`;
 const SIMULATE_INPUT_ERR = `An error occurred while simulating inputs when testing a <Machine/> component!`;
 
+// DOC efect handlers. the render handler can be changed with that signature
+// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
 const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState(
     { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
-    params.callback
+    // TODO : DOC it
+    params.postRenderCallback
   );
 };
 
@@ -45,11 +48,10 @@ export class Machine extends Component {
   // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
   // When passed as part of a `props.children`, the function component would be transformed into a react element
   // and hence can no longer be used. We do not want the react element, we want the react element factory...
-  // It is thereforth necessary to pass the render component as a property
+  // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
   // TODO : error flows to handle also -> pass to the debug emitter!!
   // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
   // TODO : write tests with MovieSearch and also for debug emitter??
-  // TODO:  do a rx adapter, and test it with startWith
   // TODO : then DOC everything, the API won't change
 
   componentDidMount() {
@@ -82,6 +84,8 @@ export class Machine extends Component {
     const debugEmitter = this.debugEmitter = (factory || (x => null))();
     this.finalizeDebugEmitter = destructor || noop;
 
+    // DOC: command render if present is replaced by the command handler from that library
+    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(next, params, effectHandlersWithRender) {
         effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
@@ -175,7 +179,7 @@ export class Machine extends Component {
 }
 
 // @deprecated
-// TODO : harmonize the two adapters naming
+// TODO : harmonize the two adapters naming, copier from flickr-search-app
 export const getStateTransducerRxAdapter = RxApi => {
   const { Subject } = RxApi;
 
@@ -183,7 +187,6 @@ export const getStateTransducerRxAdapter = RxApi => {
     subjectFactory: () => {
       return new Subject();
     },
-    subscribe: (observable, observer) => observable.subscribe(observer),
   };
 };
 
@@ -205,7 +208,7 @@ export const emitonoffAdapter = emitonoff => {
     }),
     // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
     // for a standard event emitter, there is not really an error channel...
-    // TODO : take emitter from movie search app instead : API changed!!
+    // TODO : take emitter from movie search app instead : API changed!! subscribe takes a {next, error, complete}
     subscribe: (observable, observer) => observable.subscribe(observer.next)
   }
 };

@@ -4,12 +4,29 @@
 - [API design goals](#api-design-goals)
 - [API](#api)
   * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, componentDidUpdate, componentWillUpdate />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--componentdidupdate--componentwillupdate----)
+    + [Description](#description)
+    + [Example](#example)
+    + [Types](#types)
+    + [Contracts](#contracts)
+    + [Semantics](#semantics)
   * [`testMachineComponent(testAPI, testScenario, machineDefinition)`](#-testmachinecomponent-testapi--testscenario--machinedefinition--)
+    + [Description](#description-1)
+    + [Types](#types-1)
+    + [Contracts](#contracts-1)
+    + [Semantics](#semantics-1)
 - [Tips and gotchas](#tips-and-gotchas)
 - [Further examples](#further-examples)
 - [Testing](#testing)
   * [Testing the state machine](#testing-the-state-machine)
+    + [Scenario generation](#scenario-generation)
+    + [Expected output sequences](#expected-output-sequences)
+    + [Comparison](#comparison)
+    + [Results](#results)
   * [Testing the component](#testing-the-component)
+    + [Test attributes](#test-attributes)
+    + [Mocking effects](#mocking-effects)
+    + [From test input sequence to events](#from-test-input-sequence-to-events)
+    + [Test assertion](#test-assertion)
   * [Additional considerations](#additional-considerations)
 - [Prior art and useful references](#prior-art-and-useful-references)
 
@@ -117,33 +134,35 @@ suitable implementation
 - the specifics of the implementation should not impact testing (hooks, suspense, context, etc.)
 
 As a result of these design goals :
-- we do not use React hooks, context, portal, fragments, `jsx`, and use the minimum React lifecycle 
-hooks
+- we do not use React context, portal, fragments, `jsx`, and use the minimum React lifecycle hooks
 - the component user can of course use the whole extent of the API at disposal, those restrictions 
 only concern our implementation of the `<Machine />` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
-- any state machine implementation can be substituted to our library provided that it respects 
-the machine interface and contracts: 
-  - it takes an event as unique parameter
-  - it returns an array of commands
+- any state machine implementation can be substituted to our library provided that :
+  - it implements a `.yield` method
   - it produces no effects
-- we use dependency injection to pass the modules responsible for effects to the `<Machine />` component
+  - it returns an array of commands (implementation relying on callback or event hooks cannot be 
+  integrated)
+- we use dependency injection to pass the modules responsible for effects to the `<Machine 
+/>` component
 
 # API
-## ` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith />`
+## ` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, componentDidUpdate, componentWillUpdate />`
 
 ### Description
 We expose a `<Machine />` React component which will hold the state machine and implement its 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
 props reflect : the underlying machine, pre-processing of interfaced 
-system's raw events, a set of functions executing machine commands and effects on the 
-interfaced systems.
+system's raw events, functions executing machine commands and performing effects on the 
+interfaced systems. They also include `componentDidUpdate` and `componentWillUpdate` props
+ to integrate with the relevant React API. 
 Our `Machine` component expects some props but does not expect children components. 
 
 ### Example
-To showcase usage of our react component with our machine library, we will implement an [image 
-search application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
+To showcase 
+usage of our react component with our machine library, we will implement an [image search 
+application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
 That application basically takes an input from the user, looks up images related
  to that search input, and displays it. The user can then click on a particular image to see it 
  in more details. 
@@ -161,275 +180,165 @@ The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.
 
-The machine is translated into the data structure expected by the supporting `state-transducer` 
-library:
-
 ```javascript
-import { NO_OUTPUT } from "state-transducer";
-import { COMMAND_SEARCH, NO_ACTIONS, NO_STATE_UPDATE } from "./properties";
-import { applyJSONpatch, renderAction, renderGalleryApp } from "./helpers";
+export class GalleryApp extends React.Component {
+  constructor(props) {
+    super(props);
+  }
 
-export const imageGalleryFsmDef = {
-  events: [
-    "START",
-    "SEARCH",
-    "SEARCH_SUCCESS",
-    "SEARCH_FAILURE",
-    "CANCEL_SEARCH",
-    "SELECT_PHOTO",
-    "EXIT_PHOTO"
-  ],
-  states: { init: "", start: "", loading: "", gallery: "", error: "", photo: "" },
-  initialControlState: "init",
-  initialExtendedState: {
-    query: "",
-    items: [],
-    photo: undefined,
-    gallery: ""
-  },
-  transitions: [
-    { from: "init", event: "START", to: "start", action: NO_ACTIONS },
-    { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    {
-      from: "loading",
-      event: "SEARCH_SUCCESS",
-      to: "gallery",
-      action: (extendedState, eventData, fsmSettings) => {
-        const items = eventData;
+  render() {
+    const { query, photo, items, trigger, gallery: galleryState } = this.props;
 
-        return {
-          updates: [{ op: "add", path: "/items", value: items }],
-          outputs: NO_OUTPUT
-        };
-      }
-    },
-    {
-      from: "loading",
-      event: "SEARCH_FAILURE",
-      to: "error",
-      action: NO_ACTIONS
-    },
-    {
-      from: "loading",
-      event: "CANCEL_SEARCH",
-      to: "gallery",
-      action: NO_ACTIONS
-    },
-    { from: "error", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    { from: "gallery", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    {
-      from: "gallery",
-      event: "SELECT_PHOTO",
-      to: "photo",
-      action: (extendedState, eventData, fsmSettings) => {
-        const item = eventData;
-
-        return {
-          updates: [{ op: "add", path: "/photo", value: item }],
-          outputs: NO_OUTPUT
-        };
-      }
-    },
-    { from: "photo", event: "EXIT_PHOTO", to: "gallery", action: NO_ACTIONS }
-  ],
-  entryActions: {
-    loading: (extendedState, eventData, fsmSettings) => {
-      const { items, photo } = extendedState;
-      const query = eventData;
-      const searchCommand = {
-        command: COMMAND_SEARCH,
-        params: query
-      };
-      const renderGalleryAction = renderAction({ query, items, photo, gallery: "loading" });
-
-      return {
-        outputs: [searchCommand].concat(renderGalleryAction.outputs),
-        updates: NO_STATE_UPDATE
-      };
-    },
-    photo: renderGalleryApp("photo"),
-    gallery: renderGalleryApp("gallery"),
-    error: renderGalleryApp("error"),
-    start: renderGalleryApp("start")
-  },
-  updateState: applyJSONpatch,
-  options: {},
+    return div(".ui-app", { 'data-state': galleryState }, [
+      h(Form, { galleryState, onSubmit: trigger('onSubmit'), onClick: trigger('onCancelClick') }, []),
+      h(Gallery, { galleryState, items, onClick: trigger('onGalleryClick') }, []),
+      h(Photo, { galleryState, photo, onClick: trigger('onPhotoClick') }, [])
+    ])
+  }
 }
 
-```
+const renderGalleryApp = machineState => (extendedState, eventData, fsmSettings) => {
+  const { query, items, photo } = extendedState;
+ 
+  return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: machineState }, []))
+}
 
-Note: 
-- how the black bullet (entry point) from our machine graph corresponds to a `init` control 
-state, which moves to the `start` control state with the initial event `START`.
-- every control state entry will lead to displaying some screens. In order not to repeat that 
-logic, we extract it into the `entryActions` property and we will use later the corresponding 
-`state-transducer` plugin which makes use of this data.
-
-That was for encoding the behaviour of our user interface. We now have to encode our user 
-interface as a React component. As we will use the `<Machine />` component, we only have to 
-specify the corresponding *props* :
-
-```javascript
-import { COMMAND_RENDER, COMMAND_SEARCH, NO_INTENT } from "./properties"
-import { filter, map, startWith } from "rxjs/operators"
-import { runSearchQuery, destructureEvent } from "./helpers"
-import { INIT_EVENT } from "state-transducer"
-import { Subject } from "rxjs/index"
-import { GalleryApp } from "./imageGalleryComponent"
-import Flipping from "flipping"
-import React from "react";
-
-const flipping = new Flipping();
-const stateTransducerRxAdapter = {
-  subjectFactory : () => new Subject()
-};
-
-export const imageGalleryReactMachineDef = {
-  options: { initialEvent: [ "START"] },
-  renderWith: GalleryApp,
-  eventHandler: stateTransducerRxAdapter,
-  preprocessor: rawEventSource =>
-    rawEventSource.pipe(
-      map(ev => {
-        const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
-
-        if (rawEventName === INIT_EVENT) {
-          return { [INIT_EVENT]: void 0 };
+export const machines = {
+  imageGallery: {
+      initialExtendedState: { query: "", items: [], photo: undefined, gallery: "" },
+      states: { start: "", loading: "", gallery: "", error: "", photo: "" },
+      events: ["SEARCH", "SEARCH_SUCCESS", "SEARCH_FAILURE", "CANCEL_SEARCH", "SELECT_PHOTO", "EXIT_PHOTO"],
+      preprocessor: rawEventSource => rawEventSource.pipe(
+        map(ev => {
+          const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
+    
+          if (rawEventName === INIT_EVENT) {
+            return { [INIT_EVENT]: void 0 };
+          }
+          // Form raw events
+          else if (rawEventName === "onSubmit") {
+            e.persist();
+            e.preventDefault();
+            return { SEARCH: ref.current.value };
+          }
+          else if (rawEventName === "onCancelClick") {
+            return { CANCEL_SEARCH: void 0 };
+          }
+          // Gallery
+          else if (rawEventName === "onGalleryClick") {
+            const item = e;
+            return { SELECT_PHOTO: item };
+          }
+          // Photo detail
+          else if (rawEventName === "onPhotoClick") {
+            return { EXIT_PHOTO: void 0 };
+          }
+          // System events
+          else if (rawEventName === "SEARCH_SUCCESS") {
+            const items = e;
+            return { SEARCH_SUCCESS: items };
+          }
+          else if (rawEventName === "SEARCH_FAILURE") {
+            return { SEARCH_FAILURE: void 0 };
+          }
+    
+          return NO_INTENT;
+        }),
+        filter(x => x !== NO_INTENT)
+      ),
+      transitions: [
+        { from: INIT_STATE, event: INIT_EVENT, to: "start", action: NO_ACTIONS },
+        { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        {
+          from: "loading", event: "SEARCH_SUCCESS", to: "gallery", action: (extendedState, eventData, fsmSettings) => {
+            const items = eventData;
+    
+            return {
+              updates: [{ op: "add", path: "/items", value: items }],
+              outputs: NO_OUTPUT
+            };
+          }
+        },
+        { from: "loading", event: "SEARCH_FAILURE", to: "error", action: NO_ACTIONS },
+        { from: "loading", event: "CANCEL_SEARCH", to: "gallery", action: NO_ACTIONS },
+        { from: "error", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        { from: "gallery", event: "SEARCH", to: "loading", action: NO_ACTIONS },
+        {
+          from: "gallery", event: "SELECT_PHOTO", to: "photo", action: (extendedState, eventData, fsmSettings) => {
+            const item = eventData;
+    
+            return {
+              updates: [{ op: "add", path: "/photo", value: item }],
+              outputs: NO_OUTPUT
+            };
+          }
+        },
+        { from: "photo", event: "EXIT_PHOTO", to: "gallery", action: NO_ACTIONS }
+      ],
+      entryActions: {
+        loading: (extendedState, eventData, fsmSettings) => {
+          const { items, photo } = extendedState;
+          const query = eventData;
+          const searchCommand = { command: COMMAND_SEARCH, params: query };
+          const renderGalleryAction = renderAction(trigger =>
+            h(GalleryApp, { query, items, trigger, photo, gallery: "loading" }, [])
+          );
+    
+          return {
+            outputs: [searchCommand, renderGalleryAction.outputs],
+            updates: []
+          };
+        },
+        photo: renderGalleryApp("photo"),
+        gallery: renderGalleryApp("gallery"),
+        error: renderGalleryApp("error"),
+        start: renderGalleryApp("start")
+      },
+      effectHandlers: { runSearchQuery },
+      commandHandlers: {
+        [COMMAND_SEARCH]: (obs, { runSearchQuery }) => {
+          return obs.pipe(switchMap(({ trigger, params }) => {
+            const query = params;
+            return runSearchQuery(query)
+              .then(data => {
+                trigger("SEARCH_SUCCESS")(data.items);
+              })
+              .catch(error => {
+                trigger("SEARCH_FAILURE")(void 0);
+              });
+          }));
         }
-        // Form raw events
-        else if (rawEventName === "START") {
-          return { START: void 0 };
-        } else if (rawEventName === "onSubmit") {
-          e.persist();
-          e.preventDefault();
-          return { SEARCH: ref.current.value };
-        } else if (rawEventName === "onCancelClick") {
-          return { CANCEL_SEARCH: void 0 };
-        }
-        // Gallery
-        else if (rawEventName === "onGalleryClick") {
-          const item = e;
-          return { SELECT_PHOTO: item };
-        }
-        // Photo detail
-        else if (rawEventName === "onPhotoClick") {
-          return { EXIT_PHOTO: void 0 };
-        }
-        // System events
-        else if (rawEventName === "SEARCH_SUCCESS") {
-          const items = e;
-          return { SEARCH_SUCCESS: items };
-        } else if (rawEventName === "SEARCH_FAILURE") {
-          return { SEARCH_FAILURE: void 0 };
-        }
-
-        return NO_INTENT;
-      }),
-      filter(x => x !== NO_INTENT),
-      startWith({ START: void 0 })
-    ),
-  commandHandlers: {
-    [COMMAND_SEARCH]: (next, query, effectHandlers) => {
-      effectHandlers
-        .runSearchQuery(query)
-        .then(data => {
-          next(["SEARCH_SUCCESS",data.items]);
-        })
-        .catch(error => {
-          next(["SEARCH_FAILURE", void 0]);
-        });
-    }
-  },
-  effectHandlers: {
-    runSearchQuery: runSearchQuery,
-    [COMMAND_RENDER]: (machineComponent, renderWith, params, next) => {
-      // Applying flipping animations : read DOM before render, and flip after render
-      flipping.read();
-      machineComponent.setState(
-        { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
-        () => flipping.flip()
-      );
-    }
+      },
+      inject: new Flipping(),
+      componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
+      componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();},
   }
 };
 
-``` 
+const showMachine = machine => {
+  const fsmSpecsWithEntryActions = decorateWithEntryActions(machine, machine.entryActions, null);
+  const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch });
 
-Note:
-- we render the user interface with the `GalleryApp` component (`renderWith`)
-- we use Rxjs (`stateTransducerRxAdapter`) for event handling between the component and the 
-interfaced systems
-- we kick start the machine with the `START` event (`options.initialEvent`)
-- inputs received from the interfaced systems (network responses or user inputs) are translated 
-into inputs for the state machine by the preprocessor (`preprocessor`)
-- our interface only performs two actions on its interfaced systems : rendering screens, and 
-querying remote content. As the rendering command is implemented by the `<Machine />` component, `commandHandlers` only implement the `COMMAND_SEARCH` command (`commandHandlers`).
-- the `COMMAND_SEARCH` command use the `runSearchQuery` effect runner (`effectHandlers`)
-- the render command can be customized if necessary by specifying an alternative render 
-implementation. Here we wanted to use the `Flipping` animation library, which requires running 
-some commands before and after updating the DOM. That forced us to customize the rendering.
+  return React.createElement(Machine, {
+    eventHandler: stateTransducerRxAdapter,
+    preprocessor: machine.preprocessor,
+    fsm: fsm,
+    commandHandlers: machine.commandHandlers,
+    componentWillUpdate: (machine.componentWillUpdate || noop)(machine.inject),
+    componentDidUpdate: (machine.componentDidUpdate || noop)(machine.inject)
+  }, null)
 
-The machine produces *props* which are fed into `GalleryApp`: 
- 
- ```javascript
-export function GalleryApp(props){
-  // NOTE: `query` is not used! :-) Because we use a uncontrolled component, we need not use query
-  const { query, photo, items, next, gallery: galleryState } = props;
-
-  return div(".ui-app", { "data-state": galleryState }, [
-    h(
-      Form,
-      {
-        galleryState,
-        onSubmit: (ev, formRef) => next(["onSubmit", ev, formRef]),
-        onClick: ev => next(["onCancelClick"])
-      },
-      []
-    ),
-    h(
-      Gallery,
-      { galleryState, items, onClick: item => next(["onGalleryClick", item]) },
-      []
-    ),
-    h(Photo, { galleryState, photo, onClick: ev => next(["onPhotoClick"]) }, [])
-  ]);
-}
-
-```
-
-Note:
-- `GalleryApp` is a **stateless functional component**: state concerns are handled by the state 
-machine.
-
-
-We now have all the pieces to integrate for our application:
-
-```javascript
-import React from "react";
-import ReactDOM from "react-dom";
-import "./index.css";
-import { Machine } from "react-state-driven";
-import { imageGalleryFsmDef } from "./imageGalleryFsm";
-import { imageGalleryReactMachineDef } from "./imageGalleryReactMachineDef";
-import h from "react-hyperscript";
-import {
-  createStateMachine,
-  decorateWithEntryActions,
-  fsmContracts
-} from "state-transducer";
-
-const fsmSpecsWithEntryActions = decorateWithEntryActions(
-  imageGalleryFsmDef,
-  imageGalleryFsmDef.entryActions,
-  null
-);
-const fsm = createStateMachine(fsmSpecsWithEntryActions, {
-  debug: { console, checkContracts: fsmContracts }
-});
-
+// Displays all machines (not very beautifully, but this is just for testing)
 ReactDOM.render(
-  h(Machine, Object.assign({}, imageGalleryReactMachineDef, { fsm }), []),
-  document.getElementById("root")
+  div(
+    Object.keys(machines).map(machine => {
+      return div([
+        span(machine),
+        showMachine(machines[machine])
+      ])
+    })
+  ),
+  document.getElementById('root')
 );
 
 ```

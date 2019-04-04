@@ -1,52 +1,40 @@
 {
-  "repository": "git@github.com:brucou/react-state-driven.git",
   "name": "react-state-driven",
-  "sideEffects": false,
-  "author": "brucou",
-  "version": "0.8.0",
-  "license": "MIT",
   "description": "A state machine abstraction for React",
-  "main": "dist/react-state-driven.js",
-  "module": "dist/react-state-driven.es.js",
+  "version": "0.8.2",
+  "license": "MIT",
+  "esnext": "dist-src/index.js",
+  "main": "dist-node/index.js",
+  "module": "dist-web/index.js",
+  "types": "dist-types/index.d.ts",
+  "pika": true,
+  "sideEffects": false,
   "files": [
-    "DISCLAIMER",
-    "dist"
+    "dist-*/",
+    "assets/",
+    "bin/"
   ],
-  "@pika/pack": {
-    "pipeline": [
-      [
-        "@pika/plugin-standard-pkg",
-        {
-          "exclude": [
-            "__tests__/**/*",
-            "tests/**/*"
-          ]
-        }
-      ],
-      [
-        "@pika/plugin-build-node"
-      ],
-      [
-        "@pika/plugin-build-web"
-      ],
-      [
-        "@pika/plugin-build-types"
-      ]
-    ]
+  "repository": "git@github.com:brucou/react-state-driven.git",
+  "dependencies": {
+    "state-transducer": "^0.11.3",
+    "state-transducer-testing": "^0.11.3"
   },
-  "scripts": {
-    "build": "rollup -c",
-    "prepublish": "npm run build",
-    "start": "webpack-dev-server --open",
-    "test": "webpack-dev-server --config tests/webpack.config.js --open"
+  "peerDependencies": {
+    "react": ">=16.3"
   },
   "devDependencies": {
+    "@pika/plugin-build-node": "^0.3.14",
+    "@pika/plugin-build-types": "^0.3.14",
+    "@pika/plugin-build-web": "^0.3.14",
+    "@pika/plugin-standard-pkg": "^0.3.14",
     "@babel/core": "^7.4.0",
     "@babel/plugin-external-helpers": "^7.2.0",
     "@babel/preset-react": "^7.0.0",
     "babel-plugin-external-helpers": "^7.0.0-beta.3",
     "babel-preset-env": "^1.7.0",
     "dom-testing-library": "^3.12.3",
+    "enzyme": "^3.7.0",
+    "enzyme-adapter-react-16": "^1.7.0",
     "fetch-jsonp": "^1.1.3",
     "flipping": "1.1.0",
     "fp-rosetree": "^0.6.2",
@@ -78,17 +66,6 @@
     "superagent": "^4.1.0",
     "webpack": "^4.16.5",
     "webpack-cli": "^3.0.1",
-    "webpack-dev-server": "^3.1.4",
-    "@pika/plugin-build-node": "^0.3.14",
-    "@pika/plugin-build-types": "^0.3.14",
-    "@pika/plugin-build-web": "^0.3.14",
-    "@pika/plugin-standard-pkg": "^0.3.14"
-  },
-  "dependencies": {
-    "state-transducer": "^0.11.3",
-    "state-transducer-testing": "^0.11.3"
-  },
-  "peerDependencies": {
-    "react": ">=16.3"
+    "webpack-dev-server": "^3.1.4"
   }
 }
