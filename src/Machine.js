@@ -8,16 +8,11 @@ import { identity, logAndRethrow, tryCatch } from "./helpers";
 
 const EVENT_HANDLER_API_NEXT_ERR = `An error occurred while using the 'next' function defined in event handler component prop!`;
 const EVENT_HANDLER_API_SUBJECT_FACTORY_ERR = `An error occurred while using the 'subjectFactory' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_ERROR_ERR = `An error occurred while using the 'error' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_COMPLETE_ERR = `An error occurred while using the 'complete' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_SUBSCRIBE_ERR = `An error occurred while using the 'subscribe' function defined in event handler component prop!`;
 const COMMAND_HANDLER_EXEC_ERR = command => `An error occurred while executing command handler for command ${command}`;
 const PREPROCESSOR_EXEC_ERR = `An error occurred while executing the preprocessor configured for your <Machine/> component!`;
 const FSM_EXEC_ERR = `An error occurred while executing the state machine configured for your <Machine/> component!`;
 const SIMULATE_INPUT_ERR = `An error occurred while simulating inputs when testing a <Machine/> component!`;
 
-// DOC efect handlers. the render handler can be changed with that signature
-// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
 const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState(
     { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
