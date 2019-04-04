@@ -57,7 +57,7 @@ which address specific concerns :
 or, what is equivalent, its present input and current state 
 - the command handler interprets and executes incoming commands, delegating the execution of 
 effects to the effect handler when necessary
-- the mediator coordinates the user interface, the preprocessor, the state machine and the command 
+- the mediator orchestrates the user interface, the preprocessor, the state machine and the command 
 handler
 
 While the architecture may appear more complex (isolating concerns means more parts), we have in 
