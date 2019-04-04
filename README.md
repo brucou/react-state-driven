@@ -1,17 +1,20 @@
-**TODO update TOC**
 - [Motivation](#motivation)
 - [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
 - [Installation](#installation)
 - [API design goals](#api-design-goals)
 - [API](#api)
-  * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--componentdidupdate--componentwillupdate----)
+  * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--options--renderwith----)
+    + [Description](#description)
+    + [Example](#example)
+      - [Encoding the machine graph](#encoding-the-machine-graph)
+      - [A stateless component to render the user interface](#a-stateless-component-to-render-the-user-interface)
+      - [Implementing the user interface with `<Machine />`](#implementing-the-user-interface-with---machine----)
+      - [The final application set-up](#the-final-application-set-up)
+    + [Types](#types)
+    + [Contracts](#contracts)
+    + [Semantics](#semantics)
   * [`testMachineComponent(testAPI, testScenario, machineDefinition)`](#-testmachinecomponent-testapi--testscenario--machinedefinition--)
 - [Tips and gotchas](#tips-and-gotchas)
-- [Further examples](#further-examples)
-- [Testing](#testing)
-  * [Testing the state machine](#testing-the-state-machine)
-  * [Testing the component](#testing-the-component)
-  * [Additional considerations](#additional-considerations)
 - [Prior art and useful references](#prior-art-and-useful-references)
 
 # Motivation
@@ -160,6 +163,7 @@ For illustration, the user interface starts like this :
 
 The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
 
+#### Encoding the machine graph
 So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
 that with React using our `Machine` component.
 
@@ -255,7 +259,6 @@ export const imageGalleryFsmDef = {
     start: renderGalleryApp("start")
   },
   updateState: applyJSONpatch,
-  options: {},
 }
 
 ```
@@ -267,13 +270,50 @@ state, which moves to the `start` control state with the initial event `START`.
 logic, we extract it into the `entryActions` property and we will use later the corresponding 
 `state-transducer` plugin which makes use of this data.
 
-That was for encoding the behaviour of our user interface. We now have to encode our user 
-interface as a React component. As we will use the `<Machine />` component, we only have to 
+#### A stateless component to render the user interface
+The machine will produce *props* inside render commands. Those *props* are fed into 
+`GalleryApp`, which renders the interface: 
+ 
+ ```javascript
+export function GalleryApp(props){
+  // NOTE: `query` is not used! :-) Because we use a uncontrolled component, we need not use query
+  const { query, photo, items, next, gallery: galleryState } = props;
+
+  return div(".ui-app", { "data-state": galleryState }, [
+    h(
+      Form,
+      {
+        galleryState,
+        onSubmit: (ev, formRef) => next(["onSubmit", ev, formRef]),
+        onClick: ev => next(["onCancelClick"])
+      },
+      []
+    ),
+    h(
+      Gallery,
+      { galleryState, items, onClick: item => next(["onGalleryClick", item]) },
+      []
+    ),
+    h(Photo, { galleryState, photo, onClick: ev => next(["onPhotoClick"]) }, [])
+  ]);
+}
+
+```
+
+Note:
+- `GalleryApp` is a **stateless functional component**: state concerns are handled by the state 
+machine.
+
+
+#### Implementing the user interface with `<Machine />` 
+We have our state machine defined, we have a component to render the user interface. We now have 
+to implement the full user interface, e.g. processing events, and execute the appropriate 
+commands in response. As we will use the `<Machine />` component, we have to 
 specify the corresponding *props* for it:
 
 ```javascript
 import { COMMAND_RENDER, COMMAND_SEARCH, NO_INTENT } from "./properties"
-import { filter, map, startWith } from "rxjs/operators"
+import { filter, map } from "rxjs/operators"
 import { runSearchQuery, destructureEvent } from "./helpers"
 import { INIT_EVENT } from "state-transducer"
 import { Subject } from "rxjs/index"
@@ -370,43 +410,10 @@ querying remote content. As the rendering command is implemented by the `<Machin
 implementation. Here we wanted to use the `Flipping` animation library, which requires running 
 some commands before and after updating the DOM. That forced us to customize the rendering.
 
-The machine produces *props* which are fed into `GalleryApp`: 
- 
- ```javascript
-export function GalleryApp(props){
-  // NOTE: `query` is not used! :-) Because we use a uncontrolled component, we need not use query
-  const { query, photo, items, next, gallery: galleryState } = props;
-
-  return div(".ui-app", { "data-state": galleryState }, [
-    h(
-      Form,
-      {
-        galleryState,
-        onSubmit: (ev, formRef) => next(["onSubmit", ev, formRef]),
-        onClick: ev => next(["onCancelClick"])
-      },
-      []
-    ),
-    h(
-      Gallery,
-      { galleryState, items, onClick: item => next(["onGalleryClick", item]) },
-      []
-    ),
-    h(Photo, { galleryState, photo, onClick: ev => next(["onPhotoClick"]) }, [])
-  ]);
-}
-
-```
-
-Note:
-- `GalleryApp` is a **stateless functional component**: state concerns are handled by the state 
-machine.
-
-
+#### The final application set-up
 We now have all the pieces to integrate for our application:
 
 ```javascript
-import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import { Machine } from "react-state-driven";
@@ -498,8 +505,6 @@ is in-flight) either reusing rxjs capabilities (`switchMap`) or at the machine l
 ### Types
 Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
 
-**TODO: I AM HERE**: review the types, republish with pika
-
 ### Contracts
 - command handlers delegate **all effects on external systems** through the effect handler module
 - the `COMMAND_RENDER` command is reserved and must not be used in the command handlers' 
@@ -546,60 +551,42 @@ defined) and the `Observable` interface (`subscribe` property)
 Cf. [Testing](./Testing.md)
 
 # Tips and gotchas
-- If the configured state machine library has an initial event, it can be passed using a behavior
- subject (subject with an initial value). In that case, the `preprocessor` must be configured to 
- handle that initial event. Cf. examples
 - most of the time `preprocessor` will just change the name of the event. You can 
 perfectly if that makes sense, use `preprocessor : x => x` and directly pass on the raw 
 events to the machine as input. That is fine 
   - as long as the machine never has to perform an effect (this is one of the machine's contract)
-  . In our example, you will notice that we are doing `e.persist()`, so our example does not 
-  qualify for such a simplification of  `preprocessor`. Furthermore, for documentation and design
-   purposes, it makes sense to use any input nomenclature which links to the domain rather than 
-   the user interface. As we have seen, what is a click on a button is a search intent to the 
-   machine, and results in a search command to the command handler. 
-  - if that machine is only designed for that user interface and not intended to be reused in any
-   other context. This approach as a matter of fact couple the view to the machine. In the case of
-    our image gallery component, we could imagine a reusable parameterizable machine which 
-    implements the behaviour of a generic search input. Having a preprocessor enables to 
-    integrate such machines without a hiccup, while still disappearing out of the picture if not 
-    needed.
+  . In our example, you will notice that we are doing `e.preventDefault()` in the preprocessor. 
+  Furthermore, for documentation and design purposes, it makes sense to use any input 
+  nomenclature which links to the domain rather than the user interface. As we have seen, what is
+   a **button click** on the interface is a **search input** for the machine, and results in a 
+   **search command** to the command handler. 
+  - if the machine at hand is only designed for that user interface and not intended to be reused
+ in any other context. This approach as a matter of fact couple the view to the machine. In the 
+ case of our image gallery component, we could imagine a reusable parameterizable machine which 
+ implements the behaviour of a generic search input. Having a preprocessor enables to integrate 
+ such machines without a hiccup.
 - some machine inputs may correspond to the aggregation of several events (in advanced usage). For 
 instance, if we had to recreate a double click for the `Search` button, we would have to receive 
-two clicks before passing a `SEARCH` input to the machine. We use `Rxjs` to deal with those 
-cases, as its combinator library (`map`, `filter`, `takeUntil` etc.) allow to aggregate events in
- a fairly simple manner. Note that we could implement this logic in the state machine itself (our
-  machines are turing-machine-equivalent, they can implement any effect-less computation), but : 
-  1. it is much better to keep the machine dealing with inputs at a consistent level of 
-  abstraction; 2. that kind of event aggregation is **much easier** done with a dedicated 
+two clicks before passing a `SEARCH` input to the machine. Having an `eventHandler` interface 
+allows to use `Rxjs` to deal with those cases, as its combinator library (`map`, `filter`, 
+`takeUntil` etc.) allow to aggregate events in a fairly simple manner. Note that we could 
+implement this logic in the state machine itself (our machines are essentially Turing machines, they can implement any effect-less computation), but: 
+  1. it may be better to keep the machine dealing with inputs at a consistent level of 
+  abstraction; 2. that kind of event aggregation is done easily enough with a dedicated 
   library such as `rxjs`
-- Likewise, do not hesitate when possible to handle concurrency issues with the event processing 
-library. In our example, we used `switchMap` which only emits the response from the latest 
-request. Doing this in the machine, while possible, would needlessly complicate the design, and 
-lower the level of abstraction at which the machine operates
-- the interfaced systems can communicate with the machine via a `trigger` event emitter. As such, 
-any relevant raw event should be associated to an event handler obtained through `trigger`. The 
-`trigger` event emitter is passed as parameter by the `Machine` component to any function props 
-who may need it. For instance the `GalleryApp` component is written as follows :
-
-```javascript
-  render() {
-    const { query, photo, items, trigger, gallery: galleryState } = this.props;
-
-    return div(".ui-app", { 'data-state': galleryState }, [
-      h(Form, { galleryState, onSubmit: trigger('onSubmit'), onClick: trigger('onCancelClick') }, []),
-      h(Gallery, { galleryState, items, onClick: trigger('onGalleryClick') }, []),
-      h(Photo, { galleryState, photo, onClick: trigger('onPhotoClick') }, [])
-    ])
-  }
-```
-
-# Further examples
-All demos from examples can be found in the [demo repository](https://github.com/brucou/react-app-simple) :
-- hello world
-- controlled form
-- uncontrolled form with ref
-- image search app
+- you may want to handle some concurrency issues at the machine level. Typically in our 
+example, that would mean handling the user scenario when the user is requesting two 
+different queries in rapid succession and the first query response has not arrived before the 
+second query is executed. There is in this case a risk of the user interface displaying the wrong
+ response.
+- you may also want to do it at the command handler level to keep your machine at a higher level 
+of abstraction. A command handler may for instance recreate Rxjs's `switchMap` by keeping a record
+ of in-flight queries.
+- the interfaced systems can communicate with the machine via an event emitter. The 
+`props.renderWith` React component is injected a `next` *prop* which is an event emitter which 
+relays events to the machine's raw event source. Associated with DOM event handlers, this allows 
+the machine to receive DOM events. Command handlers are also passed the `next` event emitter, and
+ can use it to send to the machine any messages from the interfaced systems. 
 
 # Prior art and useful references
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)

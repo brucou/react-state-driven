@@ -9,21 +9,20 @@
  * @typedef {RenderCommand | SystemCommand} Command
  */
 /**
- * @typedef {{command : COMMAND_RENDER, params : (function (trigger:RawEventDispatcher):React.Component)  }}
- *   RenderCommand
+ * @typedef {{command : COMMAND_RENDER, params : *  }} RenderCommand
  */
 /**
  * @typedef {{command : CommandName, params : * }} SystemCommand
  */
+
 // Mediator
 /**
  * @typedef {Object} MachineProps
  * @property {EventPreprocessor} [preprocessor = x=>x]
  * @property {FSM_Def} fsm machine definition (typically events, states and transitions)
  * @property {Object.<CommandName, CommandHandler>} commandHandlers
- * @property {EventHandler} eventHandler Interface for event processing. Libraries such as Rxjs can be adapted to
- * that interface.
- * The factory is called with `new`. The returned object must have all methods in `Combinators`
+ * @property {EventHandler} eventHandler Interface for event processing.
+ * @property {Options} options Interface for event processing.
  */
 /**
  * @typedef {function (RawEventSource) : MachineEventSource} EventPreprocessor
@@ -32,15 +31,6 @@
  * @typedef {Object} EventHandler
  * @property {function(): Subject} subjectFactory Returns a subject which implements the observer (`next`, `error`,
  * `complete`) and observable (`subscribe`) interface.
- * @property {function(Producer): Observable} create Creates an observable from a producer function
- * @property {function(...): Observable} merge Returns an observable which merges the observables passed as parameter
- * @property {function(...):Pipeable} map same definition as the eponym operator from rxjs v6
- * @property {function(...):Pipeable} filter same definition as the eponym operator from rxjs v6
- * @property {function(...):Pipeable} flatMap same definition as the eponym operator from rxjs v6
- * @property {function(...):Pipeable} shareReplay same definition as the eponym operator from rxjs v6
- */
-/**
- * @typedef {function(Observer) :()} Producer A producer produces and sends value to an observer
  */
 /**
  * @typedef {Observable} MachineEventSource
@@ -49,64 +39,10 @@
  * @typedef {Subject} RawEventSource
  */
 /**
- * @typedef {BasicCommandHandler | AdvancedCommandHandler} CommandHandler
- */
-/**
- * @deprecated
- * @typedef {function(RawEventDispatcher, params : *): *} BasicCommandHandler This command handler shape allows to
- * directly handle the command, independently of the interfaced event processing library
- */
-/**
- * @typedef {function(Observable, EffectHandlers): Observable} AdvancedCommandHandler This command handler shapes
- * interfaces with the event library to process the command. This is useful when the event processing library has some
- * aggregation, error or concurrency management that we want to reuse
- */
-/**
- * @typedef {function(RawEventName):RawEventCallback} RawEventDispatcher
- */
-/**
- * @typedef {function(RawEventData, React.ElementRef, ...):*} RawEventCallback
- */
-/**
- * @typedef {String} RawEventName
- */
-/**
- * @typedef {*} RawEventData
- */
-/**
- * @typedef {function(Observable, ...):Observable} EventCombinator
- */
-/**
- * @type {{map: EventCombinator, filter:EventCombinator, startWith:EventCombinator}} Combinators
- */
-// FSM
-/**
- * @typedef {function(ExtendedState, ExtendedStateUpdate): ExtendedState} ExtendedStateReducer
- */
-
-/**
- * @typedef {Object} ReactMachineDef
- * @property {*} initialExtendedState
- * @property {FSM_States} states
- * @property {Array<EventLabel>} events
- * @property {EventHandler} eventHandler
- * @property {Preprocessor} preprocessor
- * @property {Array<Transition>} transitions
- * @property {EntryActions} entryActions
- * @property {CommandHandlers} commandHandlers
- * @property {EffectHandlers} effectHandlers
- * @property {function (this, prevProps, prevState, snapshot) : void} componentDidUpdate  Cf. React doc for
- * `componentDidUpdate`
- * @property {function (this, nextProps, nextState) : void} componentWillUpdate Cf. React doc for `componentWillUpdate`
- */
-/**
- * @typedef {function (RawEventSource) : EventSource} Preprocessor
- */
-/**
- * @typedef {Object.<ControlState, ActionFactory>} EntryActions
- */
-/**
- * @typedef {Object.<CommandName, CommandHandler>} CommandHandlers
+ * @typedef {function(Emitter, Params, EffectHandlers): *} CommandHandler A command handler receives parameters to
+ * perform its command. EffectHandlers are injected for the command handler to delegate effect execution. An
+ * `Emitter` is also available for sending events to the state machine's `RawEventSource`. An emitter correspond to
+ * the `next` property of the `Observer` interface
  */
 /**
  * @typedef {Object.<EffectName, EffectHandler>} EffectHandlers
@@ -116,6 +52,11 @@
  */
 /**
  * @typedef {String} EffectName
+ */
+
+// For testing
+/**
+ * @typedef {Object.<ControlState, ActionFactory>} EntryActions
  */
 /**
  * @typedef {function (FSM_Def, MockedEffectHandlers) : FSM} MockedMachineFactory creates the instance of a machine with

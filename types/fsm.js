@@ -1,4 +1,3 @@
-
 /**
  * @typedef {Object} FSM_Def
  * @property {FSM_States} states Object whose every key is a control state admitted by the
@@ -7,6 +6,8 @@
  * @property {Array<EventLabel>} events A list of event monikers the machine is configured to react to
  * @property {Array<Transition>} transitions An array of transitions the machine is allowed to take
  * @property {*} initialExtendedState The initial value for the machine's extended state
+ * @property {{updateState :: Function(ExtendedState, ExtendedStateUpdate) : ExtendedState}} updateState function
+ * which update the extended state of the state machine
  */
 /**
  * @typedef {Object.<ControlState, *>} FSM_States
@@ -34,13 +35,16 @@
  * @typedef {function(ExtendedState, EventData, FSM_Settings) : Actions} ActionFactory
  */
 /**
- * @typedef {{updates: ExtendedStateUpdate, outputs: Array<MachineOutput> | NO_OUTPUT}} Actions The actions
+ * @typedef {{updates: ExtendedStateUpdate, outputs: Array<MachineOutput>}} Actions The actions
  * to be performed by the state machine in response to a transition. `updates` represents the state update for
  * the variables of the extended state machine. `output` represents the output of the state machine passed to the
  * API caller.
  */
 /** @typedef {function (ExtendedState, EventData) : Boolean} FSM_Predicate */
-/** @typedef {{updateState :: ExtendedStateReducer, ...}} FSM_Settings */
+/** @typedef {{debug}} FSM_Settings
+ * Miscellaneous settings including how to update the machine's state and debug
+ * configuration
+ * */
 /** @typedef {{merge: MergeObsFn, from: FromObsFn, filter: FilterObsFn, map: MapObsFn, share:ShareObsFn, ...}} FSM$_Settings */
 /**
  * @typedef {function (Array<Observable>) : Observable} MergeObsFn Similar to Rxjs v4's `Rx.Observable.merge`. Takes
@@ -104,7 +108,43 @@
 /**
  * @typedef {*} ExtendedStateUpdate
  */
-/**
- * @typedef {function(ExtendedState, ExtendedStateUpdate): ExtendedState} ExtendedStateReducer
- */
 /** @typedef {* | NO_OUTPUT} MachineOutput well it is preferrable that that be an object instead of a primitive */
+
+
+// Contract types
+/**
+ * @typedef {Object} ContractsDef
+ * @property {String} description name for the series of contracts
+ * @property {function(FSM_Def):Object} computed a function of the machine definition which returns an object to be
+ * injected to the contracts predicates
+ * @property {Array<ContractDef>} contracts array of contract definitions
+ */
+/**
+ * @typedef {Object} ContractDef
+ * @property {String} name name for the contract
+ * @property {Boolean} shouldThrow whether the contract should thrown an exception or alternatively return one
+ * @property {function(FSM_Def, computed):ContractCheck} predicate array of contract definitions
+ */
+/**
+ * @typedef {Object} ContractCheck
+ * @property {Boolean} isFulfilled whether the contract is fulfilled
+ * @property {{message:String, info:*}} blame information about the cause for the contract failure. The
+ * `message` property is destined to the developer (for instnce can be printed in the console). Info aims
+ * at providing additional data helping to track the error cause
+ * @property {function(FSM_Def, computed):ContractCheck} predicate array of contract definitions
+ */
+
+// Component types
+/**
+ * @typedef {String} CommandName
+ */
+/**
+ * @typedef {function(SubjectEmitter, CommandParams, EffectHandlers, Element, Subject): ()} CommandHandler
+ * A command handler performs effect, possibly relying on effects implementation included in the effect handlers
+ * parameter. A command handler also receives parameters for its execution and two subjects, one for receiving
+ * events, another one for emitting them. Lastly, a command handler may receive an Element which is generally used
+ * for rendering purposes
+ */
+/**
+ * @typedef {function(): Subject} SubjectFactory
+ */
