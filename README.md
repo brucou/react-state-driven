@@ -549,6 +549,7 @@ Types contracts can be found in the [repository](https://github.com/brucou/react
 - the `COMMAND_RENDER` command is reserved and must not be used in the command handlers' 
 specifications
 - types contracts
+- `next` cannot be used as a *prop* for the `renderWith` component
 
 ### Semantics
 - The `<Machine />` component :
