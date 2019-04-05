@@ -1,4 +1,9 @@
 // TODO : test actions are run in order..
+- EXAMPLE OF SUBSTITUTION : 
+  - > any state machine implementation can be substituted to our library provided that it respects 
+      the machine interface and contracts: 
+  - give an example of state machine written as a standard function - no library
+    - the password example is great for that
 - NTH: options: event emitter property name (next by default) - so interface with renderWith can 
 be customized!
 - DOC!! procss all the DOC it notes in the code

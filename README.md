@@ -143,6 +143,7 @@ only concern our implementation of the `<Machine />` component.
 (observer and observable interfaces).
 - any state machine implementation can be substituted to our library provided that it respects 
 the machine interface and contracts: 
+  - the machine is implemented by a function
   - it takes an event as unique parameter
   - it returns an array of commands
   - it produces no effects
@@ -457,6 +458,13 @@ ReactDOM.render(
 );
 
 ```
+
+Note:
+- `decorateWithEntryActions` which a plugin which allows to have a given machine produce 
+predefind actions on entering a control state. We use it here to render a given screen on entry 
+in a given control state. 
+- debug options can be configured. Currently trace messages can be output to a `console` passed 
+by the API user. Additionally, machine contracts can be checked (useful in developement mode) 
 
 ### A typical machine run
 Alright, now let's leverage the example to explain what is going on here together with the 
