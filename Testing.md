@@ -1,9 +1,11 @@
-## `testMachineComponent(testAPI, testScenario, machineDefinition)`
+** This section will be rewritten for clarity**
+
+## `testMachineComponent(testAPI, testScenario, fsmDef)`
 ### Description
 The `testMachineComponent` function runs a set of test cases on a React `<Machine/>` component 
 which wraps around an underlying state machine defining its behaviour. The tests are run entirely
- in the browser. The test framework is QUnit for the test runs, and `react-testing-library` for 
- handling the React component.
+ in the browser. The test framework is good old QUnit (yeah, you don't need fancy) for the test 
+ runs, and `react-testing-library` for handling the React component.
 
 A test case is an input sequence, and a matching expected output sequence. The input sequence is 
 a ordered set of inputs for the underlying state machine, and the matching output sequence is the
@@ -37,13 +39,12 @@ In short, the testing methodology can be summarized as follows:
 ```ejs
 Fsm testing : input seq. => fsm (black box) => output seq.
 
-Component testing : (input seq. =>) event seq. => component (black box) => assert seq. (<= output seq.)
+Component testing : (input seq. <=) event seq. => component (black box) => assert seq. (<= output seq.)
 ```
 
-
+ 
 ### Types
-In the frame of testing with QUnit, and `react-testing-library`, which are the hypothesis for 
-this function, testAPI is fixed and must be :
+As of now, testAPI is fixed and must be :
 
 ```javascript
 import * as rtl  from "react-testing-library";
@@ -54,7 +55,10 @@ const testAPI = {
 };
 ```
 
-For the definition of `MachineDefinition`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/blob/master/types/react-fsm-integration.js)
+For the definition of `FSM_Def`, `TestScenario` cf. [repository](https://github.com/brucou/react-state-driven/tree/master/types)
+
+In the future, a common interface will be defined that can be adapted to all the major existing 
+testing libraries.
 
 ### Contracts
 - input sequence and output sequence have same length
@@ -64,7 +68,7 @@ For the definition of `MachineDefinition`, `TestScenario` cf. [repository](https
 ### Semantics
 For each test case/input sequence :
 
-- the fsm under test is created with mocked effect handlers
+- the `<Machine />` under test is created with mocked effect handlers
   - using the `mockedEffectHandlers`, `mockedMachineFactory`, `machineDef`, `mocks` properties 
   passed with the parameters
 - for each input in the input sequence :
