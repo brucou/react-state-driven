@@ -447,7 +447,8 @@ ReactDOM.render(
 );
 
 ```
- 
+
+### A typical machine run
 Alright, now let's leverage the example to explain what is going on here together with the 
 `<Machine />` semantics.
 
@@ -455,7 +456,7 @@ First of all, we use `React.createElement` but you
 could just as well use jsx `<Machine ... />`, that really is but an implementation detail. In our
  implementation we are mostly using core React API and [hyperscript](https://github.com/mlmorg/react-hyperscript) rather than jsx. Then keep in mind that when we write 'the 
  machine', we refer to the state machine whose graph has been given previously. When we want to 
- refer to the `Machine` component, we will always specifically precise that.
+ refer to the `Machine` React component, we will always specifically precise that.
  
 Our state machine is basically a function which takes an input and returns outputs. The inputs 
 received by the machine are meant to be mapped to events triggered by the user through the user 
