@@ -110,7 +110,8 @@ npm install react-state-driven
 ```
 
 # Code examples
-
+For the impatient ones, you can directly review the available demos:
+ 
 | Code sample | Machine | Screenshot |  
 |:----|:----:|:----:|
 |[flickr image search](https://codesandbox.io/s/yklw04n7qj)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
