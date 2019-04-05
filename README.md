@@ -173,14 +173,13 @@ For illustration, the user interface starts like this :
 
 ![image search interface](https://i.imgur.com/mDQQTX8.png?1) 
 
- The corresponding machine is here :
+[Click here](https://codesandbox.io/s/yklw04n7qj) for a live demo.
+
+The user interface behaviour can be modelized by the following machine:
 
 ![machine visualization](assets/image%20gallery%20state%20cat.png)
 
-The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
-
-So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
-that with React using our `Machine` component.
+Let's see how to integrate that into a React codebase using our `Machine` component.
 
 #### Encoding the machine graph
 The machine is translated into the data structure expected by the supporting `state-transducer` 
@@ -282,13 +281,23 @@ export const imageGalleryFsmDef = {
 Note: 
 - how the black bullet (entry point) from our machine graph corresponds to a `init` control 
 state, which moves to the `start` control state with the initial event `START`.
+- `events` and `states` respectively are a list of events and control states accepted and 
+represented in the machine
+- `initialControlState` and `initialExtendedState` encode the initial state for the machine
+- the `transitions` property of the machine encodes the edges of the graph that modelizes the 
+behaviour of the interface
 - every control state entry will lead to displaying some screens. In order not to repeat that 
 logic, we extract it into the `entryActions` property and we will use later the corresponding 
-`state-transducer` plugin which makes use of this data.
+`state-transducer` plugin which makes use of this data
+- `updateState` specifies how to update the extended state of the machine from a description of 
+the updates to perform. We use [JSON patch](http://jsonpatch.com/) in our example. A redux-like 
+reducer, proxy-based `immer.js` or any user-provided function could also be used, as long as it 
+respects the defined interface.
 
 #### A stateless component to render the user interface
-The machine will produce *props* inside render commands. Those *props* are fed into 
-`GalleryApp`, which renders the interface: 
+The machine **controls** the user interface via the issuing of render commands, which include 
+*props* for a user-provided React component. Here, those *props* are fed into `GalleryApp`, which
+ renders the interface: 
  
  ```javascript
 export function GalleryApp(props){
@@ -317,15 +326,19 @@ export function GalleryApp(props){
 ```
 
 Note:
-- `GalleryApp` is a **stateless functional component**: state concerns are handled by the state 
-machine.
+- `GalleryApp` is a **stateless functional component** which only concerns itself with rendering 
+the interface. The interface state concerns (representation, storage, retrieval, update, etc.) are 
+handled by the state machine.
 
 
 #### Implementing the user interface with `<Machine />` 
 We have our state machine defined, we have a component to render the user interface. We now have 
 to implement the full user interface, e.g. processing events, and execute the appropriate 
 commands in response. As we will use the `<Machine />` component, we have to 
-specify the corresponding *props* for it:
+specify the corresponding *props* for it. Those *props* include, as the architecture indicates, 
+an interface by which the user interface sends events to a preprocessor which transforms them 
+into inputs for the state machine, which produces commands which are processed by command 
+handlers, which delegate the actual effect execution to effect handlers: 
 
 ```javascript
 import { COMMAND_RENDER, COMMAND_SEARCH, NO_INTENT } from "./properties"
@@ -463,8 +476,8 @@ Note:
 - `decorateWithEntryActions` which a plugin which allows to have a given machine produce 
 predefind actions on entering a control state. We use it here to render a given screen on entry 
 in a given control state. 
-- debug options can be configured. Currently trace messages can be output to a `console` passed 
-by the API user. Additionally, machine contracts can be checked (useful in developement mode) 
+- debug options can be configured as needed. Currently trace messages can be output to a `console` 
+passed by the API user. Additionally, machine contracts can be checked (useful in development mode) 
 
 ### A typical machine run
 Alright, now let's leverage the example to explain what is going on here together with the 
