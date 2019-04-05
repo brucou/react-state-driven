@@ -1,20 +1,3 @@
-import { COMMAND_RENDER, NO_STATE_UPDATE } from "./properties.js";
-/**
- *
- * @param Component
- * @param {Object} [props={}]
- * @returns {RenderCommand}
- */
-
-export function renderAction(params) {
-  return {
-    outputs: {
-      command: COMMAND_RENDER,
-      params: params
-    },
-    updates: NO_STATE_UPDATE
-  };
-}
 export function identity(x) {
   return x;
 }

@@ -73,8 +73,7 @@ var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
 
 var PREPROCESSOR_EXEC_ERR = "An error occurred while executing the preprocessor configured for your <Machine/> component!";
 var FSM_EXEC_ERR = "An error occurred while executing the state machine configured for your <Machine/> component!";
-var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!"; // DOC efect handlers. the render handler can be changed with that signature
-// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
+var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!";
 
 var defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState({
@@ -145,10 +144,7 @@ function (_Component) {
     var wrappedEventHandlerAPI = {
       subjectFactory: tryCatch(eventHandler.subjectFactory, logAndRethrow(debug, EVENT_HANDLER_API_SUBJECT_FACTORY_ERR))
     };
-    var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR)); // DOC : a subject factory returns a subject which has {next, error, complete} signature
-    // subscribe is a function which takes an observable and an observer and returns a subscription
-    // a subject should also be possible to use as argument to subscribe
-
+    var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
     var subjectFactory = wrappedEventHandlerAPI.subjectFactory;
     this.rawEventSource = subjectFactory();
 
@@ -162,9 +158,7 @@ function (_Component) {
       return null;
     })();
 
-    this.finalizeDebugEmitter = destructor || noop; // DOC: command render if present is replaced by the command handler from that library
-    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
-
+    this.finalizeDebugEmitter = destructor || noop;
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
@@ -182,7 +176,6 @@ function (_Component) {
           stage: FSM_OUTPUT_STAGE,
           value: actions
         }); // 2. Execute the actions, if any
-        // DOC:  next must be synchronous, and guarantee conservation of ordering
 
         if (actions === stateTransducer.NO_OUTPUT) {
           return void 0;
@@ -267,7 +260,40 @@ function (_Component) {
   };
 
   return Machine;
-}(React.Component); // @deprecated
+}(React.Component);
+var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(RxApi) {
+  var Subject = RxApi.Subject;
+  return {
+    subjectFactory: function subjectFactory() {
+      return new Subject();
+    }
+  };
+};
+var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
+  var eventEmitter = emitonoff();
+  var DUMMY_NAME_SPACE = "_";
+  var subscribers = [];
+  return {
+    subjectFactory: function subjectFactory() {
+      return {
+        next: function next(x) {
+          return eventEmitter.emit(DUMMY_NAME_SPACE, x);
+        },
+        complete: function complete() {
+          return subscribers.forEach(function (f) {
+            return eventEmitter.off(DUMMY_NAME_SPACE, f);
+          });
+        },
+        subscribe: function subscribe(_ref) {
+          var f = _ref.next,
+              _ = _ref.error,
+              __ = _ref.complete;
+          return subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f);
+        }
+      };
+    }
+  };
+}; // Test framework helpers
 
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
   var effects = Object.keys(effectHandlers);
@@ -384,4 +410,6 @@ function assertPropsContract(props) {
 exports.COMMAND_RENDER = COMMAND_RENDER;
 exports.Machine = Machine;
 exports.NO_STATE_UPDATE = NO_STATE_UPDATE;
+exports.getEventEmitterAdapter = getEventEmitterAdapter;
+exports.getStateTransducerRxAdapter = getStateTransducerRxAdapter;
 exports.testMachineComponent = testMachineComponent;

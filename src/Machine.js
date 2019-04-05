@@ -55,10 +55,12 @@ export class Machine extends Component {
 
     const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith}
       = machineComponent.props;
+
     const initialEvent = options && options.initialEvent;
     const debug = options && options.debug || null;
     const traceFactory = debug && debug.traceFactory || {};
     const console = debug && debug.console || emptyConsole;
+
     // Wrapping the user-provided API with tryCatch to detect error early
     const wrappedEventHandlerAPI = {
       subjectFactory: tryCatch(
@@ -67,9 +69,7 @@ export class Machine extends Component {
       )
     };
     const wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
-    // DOC : a subject factory returns a subject which has {next, error, complete} signature
-    // subscribe is a function which takes an observable and an observer and returns a subscription
-    // a subject should also be possible to use as argument to subscribe
+
     const { subjectFactory } = wrappedEventHandlerAPI;
     this.rawEventSource = subjectFactory();
     const next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
@@ -79,8 +79,6 @@ export class Machine extends Component {
     const debugEmitter = this.debugEmitter = (factory || (x => null))();
     this.finalizeDebugEmitter = destructor || noop;
 
-    // DOC: command render if present is replaced by the command handler from that library
-    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
     const commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, {
       [COMMAND_RENDER]: function renderHandler(next, params, effectHandlersWithRender) {
         effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
@@ -104,7 +102,6 @@ export class Machine extends Component {
           debugEmitter && debugEmitter.next({ stage: FSM_OUTPUT_STAGE, value: actions });
 
           // 2. Execute the actions, if any
-          // DOC:  next must be synchronous, and guarantee conservation of ordering
           if (actions === NO_OUTPUT) {return void 0;}
           else {
             const filteredActions = actions.filter(action => action !== NO_OUTPUT);
@@ -173,8 +170,6 @@ export class Machine extends Component {
   }
 }
 
-// @deprecated
-// TODO : harmonize the two adapters naming, copier from flickr-search-app
 export const getStateTransducerRxAdapter = RxApi => {
   const { Subject } = RxApi;
 
@@ -185,27 +180,20 @@ export const getStateTransducerRxAdapter = RxApi => {
   };
 };
 
-// @deprecated
-export const emitonoffAdapter = emitonoff => {
+export const getEventEmitterAdapter = emitonoff => {
   const eventEmitter = emitonoff();
   const DUMMY_NAME_SPACE = "_";
-  const _ = DUMMY_NAME_SPACE;
   const subscribers = [];
-  const subscribeFn = function(f) {
-    return (subscribers.push(f), eventEmitter.on(_, f))
-  }
 
   return {
     subjectFactory: () => ({
-      next: x => eventEmitter.emit(_, x),
-      complete: () => subscribers.forEach(f => eventEmitter.off(_, f)),
-      subscribe: subscribeFn
+      next: x => eventEmitter.emit(DUMMY_NAME_SPACE, x),
+      complete: () => subscribers.forEach(f => eventEmitter.off(DUMMY_NAME_SPACE, f)),
+      subscribe: ({next: f, error:_, complete: __}) => {
+        return (subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f))
+      }
     }),
-    // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
-    // for a standard event emitter, there is not really an error channel...
-    // TODO : take emitter from movie search app instead : API changed!! subscribe takes a {next, error, complete}
-    subscribe: (observable, observer) => observable.subscribe(observer.next)
-  }
+  };
 };
 
 // Test framework helpers

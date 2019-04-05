@@ -146,7 +146,9 @@ We expose a `<Machine />` React component which will hold the state machine and 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
 props reflect : the underlying machine, pre-processing of interfaced 
 system's raw events, a set of functions executing machine commands and effects on the 
-interfaced systems.
+interfaced systems. The DOM rendering command handler is imposed by the `<Machine />` component 
+but can be customized via `effectHandlers[COMMAND_RENDER]` (see example).
+
 Our `Machine` component expects some props but does not expect children components. 
 
 ### Example
@@ -546,7 +548,8 @@ to be executed
    command handler can pass back information to the machine thanks to the injected event emitter. 
 - The raw event source is created with the subject factory passed as parameters. That subject must 
 implement the `Observer` interface (in particular have the `next, complete, error` properties 
-defined) and the `Observable` interface (`subscribe` property)
+defined, with all of them being **synchronous** functions) and the `Observable` interface 
+(`subscribe` property)
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
@@ -590,6 +593,8 @@ of abstraction. A command handler may for instance recreate Rxjs's `switchMap` b
 relays events to the machine's raw event source. Associated with DOM event handlers, this allows 
 the machine to receive DOM events. Command handlers are also passed the `next` event emitter, and
  can use it to send to the machine any messages from the interfaced systems. 
+- in those cases where the machine needs to communicate with other local but out of scope entities,
+ it can emit its own events, for instance custom DOM events
 
 # Prior art and useful references
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)

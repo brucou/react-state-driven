@@ -6,9 +6,6 @@ import { COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HAND
 import { identity, logAndRethrow, tryCatch } from "./helpers.js";
 var EVENT_HANDLER_API_NEXT_ERR = "An error occurred while using the 'next' function defined in event handler component prop!";
 var EVENT_HANDLER_API_SUBJECT_FACTORY_ERR = "An error occurred while using the 'subjectFactory' function defined in event handler component prop!";
-var EVENT_HANDLER_API_ERROR_ERR = "An error occurred while using the 'error' function defined in event handler component prop!";
-var EVENT_HANDLER_API_COMPLETE_ERR = "An error occurred while using the 'complete' function defined in event handler component prop!";
-var EVENT_HANDLER_API_SUBSCRIBE_ERR = "An error occurred while using the 'subscribe' function defined in event handler component prop!";
 
 var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
   return "An error occurred while executing command handler for command " + command;
@@ -16,8 +13,7 @@ var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
 
 var PREPROCESSOR_EXEC_ERR = "An error occurred while executing the preprocessor configured for your <Machine/> component!";
 var FSM_EXEC_ERR = "An error occurred while executing the state machine configured for your <Machine/> component!";
-var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!"; // DOC efect handlers. the render handler can be changed with that signature
-// DOC: rnder with recoit un next props qui est un emiteur pour passer des events au componsant
+var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing a <Machine/> component!";
 
 var defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState({
@@ -88,10 +84,7 @@ function (_Component) {
     var wrappedEventHandlerAPI = {
       subjectFactory: tryCatch(eventHandler.subjectFactory, logAndRethrow(debug, EVENT_HANDLER_API_SUBJECT_FACTORY_ERR))
     };
-    var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR)); // DOC : a subject factory returns a subject which has {next, error, complete} signature
-    // subscribe is a function which takes an observable and an observer and returns a subscription
-    // a subject should also be possible to use as argument to subscribe
-
+    var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
     var subjectFactory = wrappedEventHandlerAPI.subjectFactory;
     this.rawEventSource = subjectFactory();
 
@@ -105,9 +98,7 @@ function (_Component) {
       return null;
     })();
 
-    this.finalizeDebugEmitter = destructor || noop; // DOC: command render if present is replaced by the command handler from that library
-    // DOC: effect handler can have a render with machineComponent, renderWith, params, next as params
-
+    this.finalizeDebugEmitter = destructor || noop;
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
@@ -125,7 +116,6 @@ function (_Component) {
           stage: FSM_OUTPUT_STAGE,
           value: actions
         }); // 2. Execute the actions, if any
-        // DOC:  next must be synchronous, and guarantee conservation of ordering
 
         if (actions === NO_OUTPUT) {
           return void 0;
@@ -210,9 +200,7 @@ function (_Component) {
   };
 
   return Machine;
-}(Component); // @deprecated
-// TODO : harmonize the two adapters naming, copier from flickr-search-app
-
+}(Component);
 export var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(RxApi) {
   var Subject = RxApi.Subject;
   return {
@@ -220,37 +208,29 @@ export var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(Rx
       return new Subject();
     }
   };
-}; // @deprecated
-
-export var emitonoffAdapter = function emitonoffAdapter(emitonoff) {
+};
+export var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
   var eventEmitter = emitonoff();
   var DUMMY_NAME_SPACE = "_";
-  var _ = DUMMY_NAME_SPACE;
   var subscribers = [];
-
-  var subscribeFn = function subscribeFn(f) {
-    return subscribers.push(f), eventEmitter.on(_, f);
-  };
-
   return {
     subjectFactory: function subjectFactory() {
       return {
         next: function next(x) {
-          return eventEmitter.emit(_, x);
+          return eventEmitter.emit(DUMMY_NAME_SPACE, x);
         },
         complete: function complete() {
           return subscribers.forEach(function (f) {
-            return eventEmitter.off(_, f);
+            return eventEmitter.off(DUMMY_NAME_SPACE, f);
           });
         },
-        subscribe: subscribeFn
+        subscribe: function subscribe(_ref) {
+          var f = _ref.next,
+              _ = _ref.error,
+              __ = _ref.complete;
+          return subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f);
+        }
       };
-    },
-    // NOTE : Observer is assumed to be always a triple {next, error, complete} even though
-    // for a standard event emitter, there is not really an error channel...
-    // TODO : take emitter from movie search app instead : API changed!! subscribe takes a {next, error, complete}
-    subscribe: function subscribe(observable, observer) {
-      return observable.subscribe(observer.next);
     }
   };
 }; // Test framework helpers
