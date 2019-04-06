@@ -143,10 +143,10 @@ hooks
 only concern our implementation of the `<Machine />` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
-- any state machine implementation can be substituted to our library provided that it respects 
-the machine interface and contracts: 
+- any state machine implementation (including one that uses no dedicated library) can be 
+substituted to our library provided that it respects the machine interface and contracts: 
   - the machine is implemented by a function
-  - it takes an event as unique parameter
+  - it takes an unique input parameter of the shape `{[event name]: event data}`
   - it returns an array of commands
   - it produces no effects
 - we use dependency injection to pass the modules responsible for effects to the `<Machine />` component
@@ -549,7 +549,8 @@ Types contracts can be found in the [repository](https://github.com/brucou/react
 - the `COMMAND_RENDER` command is reserved and must not be used in the command handlers' 
 specifications
 - types contracts
-- `next` cannot be used as a *prop* for the `renderWith` component
+- `next` is injected as a *prop* to the `renderWith` component and as such cannot be overriden by 
+the component's defined *props*
 
 ### Semantics
 - The `<Machine />` component :

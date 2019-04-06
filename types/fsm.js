@@ -133,18 +133,3 @@
  * at providing additional data helping to track the error cause
  * @property {function(FSM_Def, computed):ContractCheck} predicate array of contract definitions
  */
-
-// Component types
-/**
- * @typedef {String} CommandName
- */
-/**
- * @typedef {function(SubjectEmitter, CommandParams, EffectHandlers, Element, Subject): ()} CommandHandler
- * A command handler performs effect, possibly relying on effects implementation included in the effect handlers
- * parameter. A command handler also receives parameters for its execution and two subjects, one for receiving
- * events, another one for emitting them. Lastly, a command handler may receive an Element which is generally used
- * for rendering purposes
- */
-/**
- * @typedef {function(): Subject} SubjectFactory
- */

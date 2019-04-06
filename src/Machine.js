@@ -16,20 +16,13 @@ const SIMULATE_INPUT_ERR = `An error occurred while simulating inputs when testi
 const defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState(
     { render: React.createElement(renderWith, Object.assign({}, params, { next }), []) },
-    // TODO : DOC it
+    // DOC : callback for the react default render function in options
     params.postRenderCallback
   );
 };
 
-/**
- * Class implementing a reactive system modelled by a state machine (fsm).
- * The system behaviour is determined by properties passed at construction time :
- * - `preprocessor` : translate user events and system events into machine events
- * - `fsm` : fsm
- * - `commandHandlers` : maps commands output by the fsm to the function executing those commands
- * TODO : finish : effectHandlers, the eventHandling API, the renderWith
- * DOC : callback for the react default render function in options
- */
+// TODO next version: error flows to handle also -> pass to the debug emitter!!
+// TODO next version: write tests with MovieSearch for debug emitter??
 export class Machine extends Component {
   constructor(props) {
     super(props);
@@ -44,16 +37,11 @@ export class Machine extends Component {
   // When passed as part of a `props.children`, the function component would be transformed into a react element
   // and hence can no longer be used. We do not want the react element, we want the react element factory...
   // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
-  // TODO : error flows to handle also -> pass to the debug emitter!!
-  // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
-  // TODO : write tests with MovieSearch and also for debug emitter??
-  // TODO : then DOC everything, the API won't change
-
   componentDidMount() {
     const machineComponent = this;
     assertPropsContract(machineComponent.props);
 
-    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith}
+    const { fsm: _fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith }
       = machineComponent.props;
 
     const initialEvent = options && options.initialEvent;
@@ -75,7 +63,7 @@ export class Machine extends Component {
     const next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
 
     // We need internal references for cleaning up purposes
-    const {factory, destructor} = traceFactory;
+    const { factory, destructor } = traceFactory;
     const debugEmitter = this.debugEmitter = (factory || (x => null))();
     this.finalizeDebugEmitter = destructor || noop;
 
@@ -176,7 +164,7 @@ export const getStateTransducerRxAdapter = RxApi => {
   return {
     subjectFactory: () => {
       return new Subject();
-    },
+    }
   };
 };
 
@@ -189,10 +177,10 @@ export const getEventEmitterAdapter = emitonoff => {
     subjectFactory: () => ({
       next: x => eventEmitter.emit(DUMMY_NAME_SPACE, x),
       complete: () => subscribers.forEach(f => eventEmitter.off(DUMMY_NAME_SPACE, f)),
-      subscribe: ({next: f, error:_, complete: __}) => {
-        return (subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f))
+      subscribe: ({ next: f, error: _, complete: __ }) => {
+        return (subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f));
       }
-    }),
+    })
   };
 };
 
