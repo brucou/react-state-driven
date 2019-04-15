@@ -85,11 +85,7 @@ exhibit the same property[^1]. The causality property means state machines are a
 testing, tracing and debugging 
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
- instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`]
- (https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
-   [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
-    if the need be, or to a barebone event emitter (like `emitonoff`) by simply building 
-    interface adapters.
+ instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate) if the need be, or to a barebone event emitter (like `emitonoff`) by simply building interface adapters.
 
 There are more benefits but this is not the place to go about them. Cf:
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
