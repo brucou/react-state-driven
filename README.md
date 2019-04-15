@@ -25,7 +25,7 @@ is a number of state machine libraries in the field with varying design objectiv
  an extended state machine library with a minimal API, architected around a single causal, 
  effect-less function. This particular design requires integration with the interfaced 
  systems, in order to produce the necessary effects (user events, system events, user actions). We
-  present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
+ present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
 
 This document is structured as follows :
 
@@ -505,10 +505,9 @@ function of the input received by the machine and the control state the machine 
 - The initial extended state is `{ query: '', items: [], photo: undefined }`
 - The machine transitions automatically from the initial state to the `start` control state.
   - on doing so, it issues one command : render `GalleryApp`. Render commands have a default 
-  handler which renders the `React.Element` passed as parameter. That element can be computed 
-  from the extended state of the state machine and the event data. An event emitter (`next` in 
-  code sample above)
-   is passed to allow for the element to send events to the state machine.
+  handler which renders the `renderWith` component passed as parameter with the *props* included 
+  in the render command. An event emitter (`next` in 
+  code sample above) is passed to allow for the element to send events to the state machine.
 - The `Machine` component executes the render command and renders a gallery app with an
    empty query text input, no images(`items`), and no selected image (`photo`).
 - The user enters some text in the text input
