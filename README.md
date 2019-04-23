@@ -112,7 +112,7 @@ For the impatient ones, you can directly review the available demos:
  
 | Code playground | Machine | Screenshot |  
 |:----|:----:|:----:|
-|[flickr image search](https://codesandbox.io/s/yklw04n7qj)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
+|[flickr image search](https://github.com/brucou/flickr-search-app)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
 |[TMDb movie search](https://codesandbox.io/s/ym8vpqm7m9)| ![graph](https://github.com/brucou/movie-search-app/raw/specs-all/article/movie%20search%20good%20fsm%20corrected%20flowchart%20no%20emphasis%20switchMap.png)| ![TMDb online interface screenshot](https://github.com/brucou/movie-search-app/raw/specs-all/article/app%20screenshot%20query%20detail%20-%20success.png)|
 
 
