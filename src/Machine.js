@@ -7,7 +7,6 @@ import {
 import { identity, logAndRethrow, tryCatch } from "./helpers";
 
 const EVENT_HANDLER_API_NEXT_ERR = `An error occurred while using the 'next' function defined in event handler component prop!`;
-const EVENT_HANDLER_API_SUBJECT_FACTORY_ERR = `An error occurred while using the 'subjectFactory' function defined in event handler component prop!`;
 const COMMAND_HANDLER_EXEC_ERR = command => `An error occurred while executing command handler for command ${command}`;
 const PREPROCESSOR_EXEC_ERR = `An error occurred while executing the preprocessor configured for your <Machine/> component!`;
 const FSM_EXEC_ERR = `An error occurred while executing the state machine configured for your <Machine/> component!`;
@@ -50,16 +49,9 @@ export class Machine extends Component {
     const console = debug && debug.console || emptyConsole;
 
     // Wrapping the user-provided API with tryCatch to detect error early
-    const wrappedEventHandlerAPI = {
-      subjectFactory: tryCatch(
-        eventHandler.subjectFactory,
-        logAndRethrow(debug, EVENT_HANDLER_API_SUBJECT_FACTORY_ERR)
-      )
-    };
     const wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
 
-    const { subjectFactory } = wrappedEventHandlerAPI;
-    this.rawEventSource = subjectFactory();
+    this.rawEventSource = eventHandler;
     const next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
 
     // We need internal references for cleaning up purposes
@@ -161,11 +153,7 @@ export class Machine extends Component {
 export const getStateTransducerRxAdapter = RxApi => {
   const { Subject } = RxApi;
 
-  return {
-    subjectFactory: () => {
-      return new Subject();
-    }
-  };
+  return new Subject();
 };
 
 export const getEventEmitterAdapter = emitonoff => {
@@ -174,14 +162,12 @@ export const getEventEmitterAdapter = emitonoff => {
   const subscribers = [];
 
   return {
-    subjectFactory: () => ({
       next: x => eventEmitter.emit(DUMMY_NAME_SPACE, x),
       complete: () => subscribers.forEach(f => eventEmitter.off(DUMMY_NAME_SPACE, f)),
       subscribe: ({ next: f, error: _, complete: __ }) => {
         return (subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f));
       }
-    })
-  };
+    }
 };
 
 // Test framework helpers
@@ -295,7 +281,5 @@ export function testMachineComponent(testAPI, testScenario, machineDef) {
 function assertPropsContract(props) {
   const { fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options } = props;
   if (!eventHandler) throw new Error(`<Machine/> : eventHandler prop has a falsy value!`);
-  const { subjectFactory } = eventHandler;
-  if (!subjectFactory) throw new Error(`<Machine/> : subjectFactory prop has a falsy value!`);
   if (!fsm) throw new Error(`<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!`);
 }
