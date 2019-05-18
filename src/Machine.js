@@ -22,6 +22,7 @@ const defaultRenderHandler = function defaultRenderHandler(machineComponent, ren
 
 // TODO next version: error flows to handle also -> pass to the debug emitter!!
 // TODO next version: write tests with MovieSearch for debug emitter??
+//
 export class Machine extends Component {
   constructor(props) {
     super(props);
