@@ -28,8 +28,7 @@
  * @typedef {function (RawEventSource) : MachineEventSource} EventPreprocessor
  */
 /**
- * @typedef {Object} EventHandler
- * @property {function(): Subject} subjectFactory Returns a subject which implements the observer (`next`, `error`,
+ * @typedef {Subject} EventHandler subject which implements the observer (`next`, `error`,
  * `complete`) and observable (`subscribe`) interface.
  */
 /**

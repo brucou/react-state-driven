@@ -3,7 +3,7 @@
   "name": "react-state-driven",
   "sideEffects": false,
   "author": "brucou",
-  "version": "0.8.0",
+  "version": "0.10.2",
   "license": "MIT",
   "description": "A state machine abstraction for React",
   "main": "dist/react-state-driven.js",
@@ -85,7 +85,7 @@
     "@pika/plugin-standard-pkg": "^0.3.14"
   },
   "dependencies": {
-    "state-transducer": "^0.11.3",
+    "kingly": "^0.18.1",
     "state-transducer-testing": "^0.11.3"
   },
   "peerDependencies": {

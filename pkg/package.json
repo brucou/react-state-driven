@@ -1,7 +1,7 @@
 {
   "name": "react-state-driven",
   "description": "A state machine abstraction for React",
-  "version": "0.10",
+  "version": "0.10.2",
   "license": "MIT",
   "esnext": "dist-src/index.js",
   "main": "dist-node/index.js",
@@ -16,7 +16,7 @@
   ],
   "repository": "git@github.com:brucou/react-state-driven.git",
   "dependencies": {
-    "state-transducer": "^0.11.3",
+    "kingly": "^0.18.1",
     "state-transducer-testing": "^0.11.3"
   },
   "peerDependencies": {

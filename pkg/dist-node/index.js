@@ -65,7 +65,6 @@ function _inheritsLoose(subClass, superClass) {
   subClass.__proto__ = superClass;
 }
 var EVENT_HANDLER_API_NEXT_ERR = "An error occurred while using the 'next' function defined in event handler component prop!";
-var EVENT_HANDLER_API_SUBJECT_FACTORY_ERR = "An error occurred while using the 'subjectFactory' function defined in event handler component prop!";
 
 var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
   return "An error occurred while executing command handler for command " + command;
@@ -80,18 +79,11 @@ var defaultRenderHandler = function defaultRenderHandler(machineComponent, rende
     render: React__default.createElement(renderWith, Object.assign({}, params, {
       next: next
     }), [])
-  }, // TODO : DOC it
+  }, // DOC : callback for the react default render function in options
   params.postRenderCallback);
-};
-/**
- * Class implementing a reactive system modelled by a state machine (fsm).
- * The system behaviour is determined by properties passed at construction time :
- * - `preprocessor` : translate user events and system events into machine events
- * - `fsm` : fsm
- * - `commandHandlers` : maps commands output by the fsm to the function executing those commands
- * TODO : finish : effectHandlers, the eventHandling API, the renderWith
- * DOC : callback for the react default render function in options
- */
+}; // TODO next version: error flows to handle also -> pass to the debug emitter!!
+// TODO next version: write tests with MovieSearch for debug emitter??
+//
 
 
 var Machine =
@@ -115,10 +107,6 @@ function (_Component) {
   // When passed as part of a `props.children`, the function component would be transformed into a react element
   // and hence can no longer be used. We do not want the react element, we want the react element factory...
   // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
-  // TODO : error flows to handle also -> pass to the debug emitter!!
-  // TODO: go to 1.0 with a debug emitter made but tested with console or sth like that
-  // TODO : write tests with MovieSearch and also for debug emitter??
-  // TODO : then DOC everything, the API won't change
 
 
   var _proto = Machine.prototype;
@@ -141,12 +129,8 @@ function (_Component) {
     var traceFactory = debug && debug.traceFactory || {};
     var console = debug && debug.console || emptyConsole; // Wrapping the user-provided API with tryCatch to detect error early
 
-    var wrappedEventHandlerAPI = {
-      subjectFactory: tryCatch(eventHandler.subjectFactory, logAndRethrow(debug, EVENT_HANDLER_API_SUBJECT_FACTORY_ERR))
-    };
     var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
-    var subjectFactory = wrappedEventHandlerAPI.subjectFactory;
-    this.rawEventSource = subjectFactory();
+    this.rawEventSource = eventHandler;
 
     var _next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR)); // We need internal references for cleaning up purposes
 
@@ -263,34 +247,26 @@ function (_Component) {
 }(React.Component);
 var getStateTransducerRxAdapter = function getStateTransducerRxAdapter(RxApi) {
   var Subject = RxApi.Subject;
-  return {
-    subjectFactory: function subjectFactory() {
-      return new Subject();
-    }
-  };
+  return new Subject();
 };
 var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
   var eventEmitter = emitonoff();
   var DUMMY_NAME_SPACE = "_";
   var subscribers = [];
   return {
-    subjectFactory: function subjectFactory() {
-      return {
-        next: function next(x) {
-          return eventEmitter.emit(DUMMY_NAME_SPACE, x);
-        },
-        complete: function complete() {
-          return subscribers.forEach(function (f) {
-            return eventEmitter.off(DUMMY_NAME_SPACE, f);
-          });
-        },
-        subscribe: function subscribe(_ref) {
-          var f = _ref.next,
-              _ = _ref.error,
-              __ = _ref.complete;
-          return subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f);
-        }
-      };
+    next: function next(x) {
+      return eventEmitter.emit(DUMMY_NAME_SPACE, x);
+    },
+    complete: function complete() {
+      return subscribers.forEach(function (f) {
+        return eventEmitter.off(DUMMY_NAME_SPACE, f);
+      });
+    },
+    subscribe: function subscribe(_ref) {
+      var f = _ref.next,
+          _ = _ref.error,
+          __ = _ref.complete;
+      return subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f);
     }
   };
 }; // Test framework helpers
@@ -402,8 +378,6 @@ function assertPropsContract(props) {
       effectHandlers = props.effectHandlers,
       options = props.options;
   if (!eventHandler) throw new Error("<Machine/> : eventHandler prop has a falsy value!");
-  var subjectFactory = eventHandler.subjectFactory;
-  if (!subjectFactory) throw new Error("<Machine/> : subjectFactory prop has a falsy value!");
   if (!fsm) throw new Error("<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!");
 }
 

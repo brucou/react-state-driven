@@ -1,3 +1,23 @@
+- change API:
+  - have renderWith
+  - have props + isVisible[=false] as state of <Machine> components
+  - toggle isVisible on the first render
+  - when COMMAND_RENDER, merge the params in the props property
+  - rerender renderWith with the new merged props
+  - NOTE: can already be done with 
+  [COMMAND_RENDER]: (machineComponent, renderWith, params, next) => {
+        // Applying flipping animations : read DOM before render, and flip after render
+        flipping.read();
+        const newProps = merge(machineComponent.props, params); // merge be optional user defined
+         props of <Machine>
+        machineComponent.setState(
+          { 
+            render: React.createElement(renderWith, Object.assign({}, newProps, { next }), []),
+            props: newProps 
+          },
+          () => flipping.flip()
+        );
+      }
 // TODO : test actions are run in order..
 - EXAMPLE OF SUBSTITUTION : 
   - > any state machine implementation can be substituted to our library provided that it respects 

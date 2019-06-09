@@ -349,14 +349,11 @@ import Flipping from "flipping"
 import React from "react";
 
 const flipping = new Flipping();
-const stateTransducerRxAdapter = {
-  subjectFactory : () => new Subject()
-};
 
 export const imageGalleryReactMachineDef = {
   options: { initialEvent: [ "START"] },
   renderWith: GalleryApp,
-  eventHandler: stateTransducerRxAdapter,
+  eventHandler: new Subject(),
   preprocessor: rawEventSource =>
     rawEventSource.pipe(
       map(ev => {
@@ -425,7 +422,7 @@ export const imageGalleryReactMachineDef = {
 
 Note:
 - we render the user interface with the `GalleryApp` component (`renderWith`)
-- we use Rxjs (`stateTransducerRxAdapter`) for event handling between the component and the 
+- we use Rxjs for event handling between the component and the 
 interfaced systems
 - we kick start the machine with the `START` event (`options.initialEvent`)
 - inputs received from the interfaced systems (network responses or user inputs) are translated 

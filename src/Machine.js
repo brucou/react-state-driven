@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { NO_OUTPUT } from "state-transducer";
+import { NO_OUTPUT } from "kingly";
 import {
   COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER,
   COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, noop

@@ -1,6 +1,7 @@
 - [Motivation](#motivation)
 - [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
 - [Installation](#installation)
+- [Code examples](#code-examples)
 - [API design goals](#api-design-goals)
 - [API](#api)
   * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--options--renderwith----)
@@ -10,6 +11,7 @@
       - [A stateless component to render the user interface](#a-stateless-component-to-render-the-user-interface)
       - [Implementing the user interface with `<Machine />`](#implementing-the-user-interface-with---machine----)
       - [The final application set-up](#the-final-application-set-up)
+    + [A typical machine run](#a-typical-machine-run)
     + [Types](#types)
     + [Contracts](#contracts)
     + [Semantics](#semantics)
@@ -23,7 +25,7 @@ is a number of state machine libraries in the field with varying design objectiv
  an extended state machine library with a minimal API, architected around a single causal, 
  effect-less function. This particular design requires integration with the interfaced 
  systems, in order to produce the necessary effects (user events, system events, user actions). We
-  present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
+ present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
 
 This document is structured as follows :
 
@@ -83,11 +85,7 @@ exhibit the same property[^1]. The causality property means state machines are a
 testing, tracing and debugging 
 
 We also have achieved greater modularity: our parts are coupled only through their interface. For
- instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`]
- (https://github.com/brucou/state-transducer) as state machine library. We could easily switch to
-   [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate)
-    if the need be, or to a barebone event emitter (like `emitonoff`) by simply building 
-    interface adapters.
+ instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate) if the need be, or to a barebone event emitter (like `emitonoff`) by simply building interface adapters.
 
 There are more benefits but this is not the place to go about them. Cf:
 - [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
@@ -108,6 +106,16 @@ with the mediator)
 ```sh
 npm install react-state-driven
 ```
+
+# Code examples
+For the impatient ones, you can directly review the available demos:
+ 
+| Code playground | Machine | Screenshot |  
+|:----|:----:|:----:|
+|[flickr image search](https://github.com/brucou/flickr-search-app)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
+|[TMDb movie search](https://codesandbox.io/s/ym8vpqm7m9)| ![graph](https://github.com/brucou/movie-search-app/raw/specs-all/article/movie%20search%20good%20fsm%20corrected%20flowchart%20no%20emphasis%20switchMap.png)| ![TMDb online interface screenshot](https://github.com/brucou/movie-search-app/raw/specs-all/article/app%20screenshot%20query%20detail%20-%20success.png)|
+
+
 
 # API design goals
 We want to have an integration which is generic enough to accommodate a large set of use cases, 
@@ -131,9 +139,10 @@ hooks
 only concern our implementation of the `<Machine />` component.
 - we defined interfaces for extended state updates (reducer interface), event processing 
 (observer and observable interfaces).
-- any state machine implementation can be substituted to our library provided that it respects 
-the machine interface and contracts: 
-  - it takes an event as unique parameter
+- any state machine implementation (including one that uses no dedicated library) can be 
+substituted to our library provided that it respects the machine interface and contracts: 
+  - the machine is implemented by a function
+  - it takes an unique input parameter of the shape `{[event name]: event data}`
   - it returns an array of commands
   - it produces no effects
 - we use dependency injection to pass the modules responsible for effects to the `<Machine />` component
@@ -162,14 +171,13 @@ For illustration, the user interface starts like this :
 
 ![image search interface](https://i.imgur.com/mDQQTX8.png?1) 
 
- The corresponding machine is here :
+[Click here](https://codesandbox.io/s/yklw04n7qj) for a live demo.
+
+The user interface behaviour can be modelized by the following machine:
 
 ![machine visualization](assets/image%20gallery%20state%20cat.png)
 
-The live example [can be accessed here](https://codesandbox.io/s/yklw04n7qj).
-
-So we have the machine specifying the behaviour of our image search. Let's see how to integrate 
-that with React using our `Machine` component.
+Let's see how to integrate that into a React codebase using our `Machine` component.
 
 #### Encoding the machine graph
 The machine is translated into the data structure expected by the supporting `state-transducer` 
@@ -271,13 +279,23 @@ export const imageGalleryFsmDef = {
 Note: 
 - how the black bullet (entry point) from our machine graph corresponds to a `init` control 
 state, which moves to the `start` control state with the initial event `START`.
+- `events` and `states` respectively are a list of events and control states accepted and 
+represented in the machine
+- `initialControlState` and `initialExtendedState` encode the initial state for the machine
+- the `transitions` property of the machine encodes the edges of the graph that modelizes the 
+behaviour of the interface
 - every control state entry will lead to displaying some screens. In order not to repeat that 
 logic, we extract it into the `entryActions` property and we will use later the corresponding 
-`state-transducer` plugin which makes use of this data.
+`state-transducer` plugin which makes use of this data
+- `updateState` specifies how to update the extended state of the machine from a description of 
+the updates to perform. We use [JSON patch](http://jsonpatch.com/) in our example. A redux-like 
+reducer, proxy-based `immer.js` or any user-provided function could also be used, as long as it 
+respects the defined interface.
 
 #### A stateless component to render the user interface
-The machine will produce *props* inside render commands. Those *props* are fed into 
-`GalleryApp`, which renders the interface: 
+The machine **controls** the user interface via the issuing of render commands, which include 
+*props* for a user-provided React component. Here, those *props* are fed into `GalleryApp`, which
+ renders the interface: 
  
  ```javascript
 export function GalleryApp(props){
@@ -306,15 +324,19 @@ export function GalleryApp(props){
 ```
 
 Note:
-- `GalleryApp` is a **stateless functional component**: state concerns are handled by the state 
-machine.
+- `GalleryApp` is a **stateless functional component** which only concerns itself with rendering 
+the interface. The interface state concerns (representation, storage, retrieval, update, etc.) are 
+handled by the state machine.
 
 
 #### Implementing the user interface with `<Machine />` 
 We have our state machine defined, we have a component to render the user interface. We now have 
 to implement the full user interface, e.g. processing events, and execute the appropriate 
 commands in response. As we will use the `<Machine />` component, we have to 
-specify the corresponding *props* for it:
+specify the corresponding *props* for it. Those *props* include, as the architecture indicates, 
+an interface by which the user interface sends events to a preprocessor which transforms them 
+into inputs for the state machine, which produces commands which are processed by command 
+handlers, which delegate the actual effect execution to effect handlers: 
 
 ```javascript
 import { COMMAND_RENDER, COMMAND_SEARCH, NO_INTENT } from "./properties"
@@ -327,14 +349,11 @@ import Flipping from "flipping"
 import React from "react";
 
 const flipping = new Flipping();
-const stateTransducerRxAdapter = {
-  subjectFactory : () => new Subject()
-};
 
 export const imageGalleryReactMachineDef = {
   options: { initialEvent: [ "START"] },
   renderWith: GalleryApp,
-  eventHandler: stateTransducerRxAdapter,
+  eventHandler: new Subject(),
   preprocessor: rawEventSource =>
     rawEventSource.pipe(
       map(ev => {
@@ -403,7 +422,7 @@ export const imageGalleryReactMachineDef = {
 
 Note:
 - we render the user interface with the `GalleryApp` component (`renderWith`)
-- we use Rxjs (`stateTransducerRxAdapter`) for event handling between the component and the 
+- we use Rxjs for event handling between the component and the 
 interfaced systems
 - we kick start the machine with the `START` event (`options.initialEvent`)
 - inputs received from the interfaced systems (network responses or user inputs) are translated 
@@ -447,7 +466,15 @@ ReactDOM.render(
 );
 
 ```
- 
+
+Note:
+- `decorateWithEntryActions` which a plugin which allows to have a given machine produce 
+predefind actions on entering a control state. We use it here to render a given screen on entry 
+in a given control state. 
+- debug options can be configured as needed. Currently trace messages can be output to a `console` 
+passed by the API user. Additionally, machine contracts can be checked (useful in development mode) 
+
+### A typical machine run
 Alright, now let's leverage the example to explain what is going on here together with the 
 `<Machine />` semantics.
 
@@ -455,7 +482,7 @@ First of all, we use `React.createElement` but you
 could just as well use jsx `<Machine ... />`, that really is but an implementation detail. In our
  implementation we are mostly using core React API and [hyperscript](https://github.com/mlmorg/react-hyperscript) rather than jsx. Then keep in mind that when we write 'the 
  machine', we refer to the state machine whose graph has been given previously. When we want to 
- refer to the `Machine` component, we will always specifically precise that.
+ refer to the `Machine` React component, we will always specifically precise that.
  
 Our state machine is basically a function which takes an input and returns outputs. The inputs 
 received by the machine are meant to be mapped to events triggered by the user through the user 
@@ -471,10 +498,9 @@ function of the input received by the machine and the control state the machine 
 - The initial extended state is `{ query: '', items: [], photo: undefined }`
 - The machine transitions automatically from the initial state to the `start` control state.
   - on doing so, it issues one command : render `GalleryApp`. Render commands have a default 
-  handler which renders the `React.Element` passed as parameter. That element can be computed 
-  from the extended state of the state machine and the event data. An event emitter (`next` in 
-  code sample above)
-   is passed to allow for the element to send events to the state machine.
+  handler which renders the `renderWith` component passed as parameter with the *props* included 
+  in the render command. An event emitter (`next` in 
+  code sample above) is passed to allow for the element to send events to the state machine.
 - The `Machine` component executes the render command and renders a gallery app with an
    empty query text input, no images(`items`), and no selected image (`photo`).
 - The user enters some text in the text input
@@ -515,6 +541,8 @@ Types contracts can be found in the [repository](https://github.com/brucou/react
 - the `COMMAND_RENDER` command is reserved and must not be used in the command handlers' 
 specifications
 - types contracts
+- `next` is injected as a *prop* to the `renderWith` component and as such cannot be overriden by 
+the component's defined *props*
 
 ### Semantics
 - The `<Machine />` component :
