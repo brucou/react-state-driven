@@ -1,8 +1,8 @@
 function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
 
 import React, { Component } from "react";
-import { NO_OUTPUT } from "kingly";
-import { COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMMAND_RENDER, COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, noop } from "./properties.js";
+import { NO_OUTPUT, COMMAND_RENDER } from "kingly";
+import { COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, noop } from "./properties.js";
 import { identity, logAndRethrow, tryCatch } from "./helpers.js";
 var EVENT_HANDLER_API_NEXT_ERR = "An error occurred while using the 'next' function defined in event handler component prop!";
 

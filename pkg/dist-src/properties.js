@@ -1,6 +1,5 @@
 export var noop = function noop() {};
 export var CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE = "Model update function must return valid update operations!";
-export var COMMAND_RENDER = 'render';
 export var NO_STATE_UPDATE = [];
 export var COMMAND_SEARCH = 'command_search';
 export var PREPROCESSOR_INPUT_STAGE = 'PREPROCESSOR_INPUT_STAGE ';

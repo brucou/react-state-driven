@@ -1,4 +1,3 @@
-export const COMMAND_RENDER: string;
 export class Machine {
 constructor(props: any);
 componentDidMount(): void;

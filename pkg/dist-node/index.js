@@ -9,7 +9,6 @@ var React__default = _interopDefault(React);
 var kingly = require('kingly');
 
 var noop = function noop() {};
-var COMMAND_RENDER = 'render';
 var NO_STATE_UPDATE = [];
 var FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';
 var FSM_OUTPUT_STAGE = 'FSM_OUTPUT_STAGE';
@@ -143,10 +142,10 @@ function (_Component) {
     })();
 
     this.finalizeDebugEmitter = destructor || noop;
-    var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
-      effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
+    var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[kingly.COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
+      effectHandlersWithRender[kingly.COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
-    var effectHandlersWithRender = effectHandlers && effectHandlers[COMMAND_RENDER] ? effectHandlers : Object.assign((_Object$assign2 = {}, _Object$assign2[COMMAND_RENDER] = defaultRenderHandler, _Object$assign2), effectHandlers);
+    var effectHandlersWithRender = effectHandlers && effectHandlers[kingly.COMMAND_RENDER] ? effectHandlers : Object.assign((_Object$assign2 = {}, _Object$assign2[kingly.COMMAND_RENDER] = defaultRenderHandler, _Object$assign2), effectHandlers);
     var preprocessedEventSource = tryCatch(preprocessor || identity, logAndRethrow(debug, PREPROCESSOR_EXEC_ERR))(this.rawEventSource);
     this.subscription = preprocessedEventSource.subscribe({
       next: function next(event) {
@@ -381,7 +380,6 @@ function assertPropsContract(props) {
   if (!fsm) throw new Error("<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!");
 }
 
-exports.COMMAND_RENDER = COMMAND_RENDER;
 exports.Machine = Machine;
 exports.NO_STATE_UPDATE = NO_STATE_UPDATE;
 exports.getEventEmitterAdapter = getEventEmitterAdapter;

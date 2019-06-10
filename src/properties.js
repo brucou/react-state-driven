@@ -1,6 +1,5 @@
 export const noop = () => {};
 export const CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE = `Model update function must return valid update operations!`;
-export const COMMAND_RENDER = 'render';
 export const NO_STATE_UPDATE = [];
 export const COMMAND_SEARCH = 'command_search';
 

@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
-import { NO_OUTPUT } from 'kingly';
+import { COMMAND_RENDER, NO_OUTPUT } from 'kingly';
 
 var noop = function noop() {};
-var COMMAND_RENDER = 'render';
 var NO_STATE_UPDATE = [];
 var FSM_INPUT_STAGE = 'FSM_INPUT_STAGE';
 var FSM_OUTPUT_STAGE = 'FSM_OUTPUT_STAGE';
@@ -374,4 +373,4 @@ function assertPropsContract(props) {
   if (!fsm) throw new Error("<Machine/> : fsm prop has a falsy value! Should be specifications for the state machine!");
 }
 
-export { COMMAND_RENDER, Machine, NO_STATE_UPDATE, getEventEmitterAdapter, getStateTransducerRxAdapter, testMachineComponent };
+export { Machine, NO_STATE_UPDATE, getEventEmitterAdapter, getStateTransducerRxAdapter, testMachineComponent };

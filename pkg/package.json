@@ -1,7 +1,7 @@
 {
   "name": "react-state-driven",
   "description": "A state machine abstraction for React",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "license": "MIT",
   "esnext": "dist-src/index.js",
   "main": "dist-node/index.js",
