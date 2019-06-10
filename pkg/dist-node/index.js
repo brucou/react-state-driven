@@ -6,7 +6,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var React = require('react');
 var React__default = _interopDefault(React);
-var stateTransducer = require('state-transducer');
+var kingly = require('kingly');
 
 var noop = function noop() {};
 var COMMAND_RENDER = 'render';
@@ -161,11 +161,11 @@ function (_Component) {
           value: actions
         }); // 2. Execute the actions, if any
 
-        if (actions === stateTransducer.NO_OUTPUT) {
+        if (actions === kingly.NO_OUTPUT) {
           return void 0;
         } else {
           var filteredActions = actions.filter(function (action) {
-            return action !== stateTransducer.NO_OUTPUT;
+            return action !== kingly.NO_OUTPUT;
           });
           filteredActions.forEach(function (action) {
             var command = action.command,
@@ -282,7 +282,7 @@ function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
 function forEachOutput(expectedOutput, fn) {
   if (!expectedOutput) return void 0;
   expectedOutput.forEach(function (output, index) {
-    if (output === stateTransducer.NO_OUTPUT) return void 0;
+    if (output === kingly.NO_OUTPUT) return void 0;
     fn(output, index);
   });
 }

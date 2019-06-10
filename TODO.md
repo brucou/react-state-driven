@@ -1,3 +1,6 @@
+- change build: pkg does not publish anymore, reinstall nd rety
+  - does not work with codesndbox playground (CORS error having nothing to do with CORS)
+  - if it does not work, reverse to a rollup build...
 - change API:
   - have renderWith
   - have props + isVisible[=false] as state of <Machine> components

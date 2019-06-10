@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { NO_OUTPUT } from 'state-transducer';
+import { NO_OUTPUT } from 'kingly';
 
 var noop = function noop() {};
 var COMMAND_RENDER = 'render';
