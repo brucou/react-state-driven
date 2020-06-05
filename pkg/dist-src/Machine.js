@@ -1,8 +1,7 @@
 function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
 
 import React, { Component } from "react";
-import { NO_OUTPUT, COMMAND_RENDER } from "kingly";
-import { COMMAND_HANDLER_INPUT_STAGE, COMMAND_HANDLER_OUTPUT_STAGE, COMMAND_HANDLERS_OUTPUT_STAGE, COMPLETE_STAGE, emptyConsole, ERROR_STAGE, FSM_INPUT_STAGE, FSM_OUTPUT_STAGE, noop } from "./properties.js";
+import { emptyConsole, noop, COMMAND_RENDER } from "./properties.js";
 import { identity, logAndRethrow, tryCatch } from "./helpers.js";
 var EVENT_HANDLER_API_NEXT_ERR = "An error occurred while using the 'next' function defined in event handler component prop!";
 
@@ -16,19 +15,14 @@ var SIMULATE_INPUT_ERR = "An error occurred while simulating inputs when testing
 
 var defaultRenderHandler = function defaultRenderHandler(machineComponent, renderWith, params, next) {
   return machineComponent.setState({
-    render: React.createElement(renderWith, Object.assign({}, params, {
+    render: /*#__PURE__*/React.createElement(renderWith, Object.assign({}, params, {
       next: next
     }), [])
   }, // DOC : callback for the react default render function in options
   params.postRenderCallback);
-}; // TODO next version: error flows to handle also -> pass to the debug emitter!!
-// TODO next version: write tests with MovieSearch for debug emitter??
-//
+};
 
-
-export var Machine =
-/*#__PURE__*/
-function (_Component) {
+export var Machine = /*#__PURE__*/function (_Component) {
   _inheritsLoose(Machine, _Component);
 
   function Machine(props) {
@@ -39,9 +33,7 @@ function (_Component) {
       render: null
     };
     _this.rawEventSource = null;
-    _this.debugEmitter = null;
     _this.subscription = null;
-    _this.finalizeDebugEmitter = null;
     return _this;
   } // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
   // When passed as part of a `props.children`, the function component would be transformed into a react element
@@ -66,23 +58,15 @@ function (_Component) {
         renderWith = _machineComponent$pro.renderWith;
     var initialEvent = options && options.initialEvent;
     var debug = options && options.debug || null;
-    var traceFactory = debug && debug.traceFactory || {};
-    var console = debug && debug.console || emptyConsole; // Wrapping the user-provided API with tryCatch to detect error early
+
+    var _console = debug && debug.console || emptyConsole; // Wrapping the user-provided API with tryCatch to detect error early
+
 
     var wrappedFsm = tryCatch(_fsm, logAndRethrow(debug, FSM_EXEC_ERR));
     this.rawEventSource = eventHandler;
 
-    var _next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR)); // We need internal references for cleaning up purposes
+    var _next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logAndRethrow(debug, EVENT_HANDLER_API_NEXT_ERR));
 
-
-    var factory = traceFactory.factory,
-        destructor = traceFactory.destructor;
-
-    var debugEmitter = this.debugEmitter = (factory || function (x) {
-      return null;
-    })();
-
-    this.finalizeDebugEmitter = destructor || noop;
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
@@ -91,29 +75,17 @@ function (_Component) {
     this.subscription = preprocessedEventSource.subscribe({
       next: function next(event) {
         // 1. Run the input on the machine to obtain the actions to perform
-        debugEmitter && debugEmitter.next({
-          stage: FSM_INPUT_STAGE,
-          value: event
-        });
-        var actions = wrappedFsm(event);
-        debugEmitter && debugEmitter.next({
-          stage: FSM_OUTPUT_STAGE,
-          value: actions
-        }); // 2. Execute the actions, if any
+        var actions = wrappedFsm(event); // 2. Execute the actions, if any
 
-        if (actions === NO_OUTPUT) {
+        if (actions === null) {
           return void 0;
         } else {
           var filteredActions = actions.filter(function (action) {
-            return action !== NO_OUTPUT;
+            return action !== null;
           });
           filteredActions.forEach(function (action) {
             var command = action.command,
                 params = action.params;
-            debugEmitter && debugEmitter.next({
-              stage: COMMAND_HANDLER_INPUT_STAGE,
-              value: action
-            });
             var commandHandler = commandHandlersWithRenderHandler[command];
 
             if (!commandHandler || typeof commandHandler !== "function") {
@@ -122,60 +94,27 @@ function (_Component) {
 
             var commandHandlerReturnValue = tryCatch(commandHandler, logAndRethrow(debug, COMMAND_HANDLER_EXEC_ERR(command)))(_next, params, effectHandlersWithRender); // NOTE : generally command handlers won't return values synchronously
             // It is however possible and we should trace that
-
-            debugEmitter && debugEmitter.next({
-              stage: COMMAND_HANDLER_OUTPUT_STAGE,
-              value: {
-                command: command,
-                returnValue: commandHandlerReturnValue
-              }
-            });
-          });
-          debugEmitter && debugEmitter.next({
-            stage: COMMAND_HANDLERS_OUTPUT_STAGE,
-            value: actions
           });
           return void 0;
         }
       },
-      error: function (_error) {
-        function error(_x) {
-          return _error.apply(this, arguments);
-        }
-
-        error.toString = function () {
-          return _error.toString();
-        };
-
-        return error;
-      }(function (error) {
+      error: function error(_error) {
         // We may get there for instance if there was a preprocessor throwing an exception
-        console.error("Machine > Mediator : an error in the event processing chain ! The machine will not process any additional events. Remember that command handlers ought never throw, but should pass errors as events back to the mediator.", error);
-        debugEmitter && debugEmitter.next({
-          stage: ERROR_STAGE,
-          value: "" + error
-        });
-      }),
-      complete: function complete() {
-        debugEmitter && debugEmitter.next({
-          stage: COMPLETE_STAGE,
-          value: "" + error
-        });
-      }
-    }); // DOC : we do not trace effectHandlers, there is no generic way to do so
-    // and it is better not to do it partially (for example spying on function but leaving the rest intact)
-    // DOC CONTRACT : no command handler should throw! but pass errors as messages or events
+        _console.error("Machine > Mediator : an error in the event processing chain ! The machine will not process any additional events. Remember that command handlers ought never throw, but should pass errors as events back to the mediator.", _error);
+      },
+      complete: function complete() {}
+    }); // DOC : we do not trace effectHandlers
+    // DOC CONTRACT: no command handler should throw! but pass errors as messages or events
+    // DOC: error behavior. Errors should be captured by the event emitter and forwarded to the error method
+    // It is up to the API user to decide if to complete the subject or not
     // Start with the initial event if any
 
     initialEvent && this.rawEventSource.next(initialEvent);
-  } // DOC:  debug emitter must have subject interface i.e.e same as subject factory returns
-  ;
+  };
 
   _proto.componentWillUnmount = function componentWillUnmount() {
     this.subscription.unsubscribe();
     this.rawEventSource.complete();
-    this.debugEmitter && this.debugEmitter.complete();
-    this.finalizeDebugEmitter();
   };
 
   _proto.render = function render() {
@@ -193,9 +132,16 @@ export var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
   var eventEmitter = emitonoff();
   var DUMMY_NAME_SPACE = "_";
   var subscribers = [];
-  return {
+  var subject = {
     next: function next(x) {
-      return eventEmitter.emit(DUMMY_NAME_SPACE, x);
+      try {
+        eventEmitter.emit(DUMMY_NAME_SPACE, x);
+      } catch (e) {
+        subject.error(e);
+      }
+    },
+    error: function error(e) {
+      throw e;
     },
     complete: function complete() {
       return subscribers.forEach(function (f) {
@@ -204,11 +150,17 @@ export var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
     },
     subscribe: function subscribe(_ref) {
       var f = _ref.next,
-          _ = _ref.error,
+          errFn = _ref.error,
           __ = _ref.complete;
-      return subscribers.push(f), eventEmitter.on(DUMMY_NAME_SPACE, f);
+      subscribers.push(f);
+      eventEmitter.on(DUMMY_NAME_SPACE, f);
+      subject.error = errFn;
+      return {
+        unsubscribe: subject.complete
+      };
     }
   };
+  return subject;
 }; // Test framework helpers
 
 function mock(sinonAPI, effectHandlers, mocks, inputSequence) {
@@ -300,7 +252,7 @@ export function testMachineComponent(testAPI, testScenario, machineDef) {
           } else {
             checkOutputs(testHarness, testCase, mockedFsm, container, expectedOutputSequence[index]);
           }
-        }).then(done).catch(function (e) {
+        }).then(done)["catch"](function (e) {
           console.log("Error", e);
           assert.ok(false, e);
           done(e);

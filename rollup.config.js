@@ -26,7 +26,8 @@ export default {
   ]),
 
   plugins: [
-    babel({ plugins: ['external-helpers'] }),
+    // TODO: why was that there?
+    // babel({ plugins: ['external-helpers'] }),
     resolve({
       // use "module" field for ES6 module if possible
       module: true, // Default: true

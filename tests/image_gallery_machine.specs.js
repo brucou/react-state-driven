@@ -1,10 +1,11 @@
 import ReactDOMServer from "react-dom/server";
 import { merge as mergeR, range, omit } from "ramda";
-import { computeTimesCircledOn, decorateWithEntryActions, INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
+import { computeTimesCircledOn, decorateWithEntryActions, INIT_EVENT, INIT_STATE, NO_OUTPUT } from "kingly";
 import { generateTestSequences } from "state-transducer-testing";
 import { assertContract, COMMAND_SEARCH, constGen, formatResult, isArrayUpdateOperations } from "./helpers";
 import { applyPatch } from "json-patch-es6/lib/duplex";
-import { COMMAND_RENDER, CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE } from "../src/properties";
+import { CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE } from "../src/properties";
+import { COMMAND_RENDER } from "../src/Machine";
 import { imageGallery } from "./fixtures/machines";
 // import { filter, flatMap, map, shareReplay, switchMap } from "rxjs/operators";
 import { merge as merge$, of, Subject } from "rxjs";

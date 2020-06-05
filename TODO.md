@@ -1,3 +1,38 @@
+# API
+- simplify
+  - preprocessor default x => x
+  - effect handlers default nothing
+  - no initial event:
+    <Machine ...>
+      <Comp slot='default' />
+      <Comp />
+    <Machine .../>
+  - try to see how to hve the renderWith component as a slot/child of <Machine>
+# Build
+- isntall pkg2 and build with that
+- use the codesandbox as a test - may be difficult to debug BUT I have the devtool!!
+
+- BEST PRACTICE: three possibilities for reusing pure components:
+  - inject a next into the component interface. That means the event handler in the component 
+  MUST use `next` to pass events. Which means they are not completely pure isnt' it. That means 
+  the component DEPENDS on `next`, though the dependency is INJECTED
+    - the `next` becomes a part of the specification of the component
+    - there could be cases where we don't want that, or we CAN"T do that. ChessBoard is a good 
+    example
+  - the component exposes an interface to pass events, just like the DOM. onclick etc. Cf. 
+  ChessBoard example. In that case, a wrapper around the component that write onclick as a 
+  function of next can be easily written. The component changes NOT AT ALL but we have to write 
+  the glue code out of it (we have to write it anyways!). So this might be a best case?
+  - the component deals with no events handlers - pure render. We then have to capture the events
+   out of the component, like cycle does. However, this event capture is COUPLED to the component 
+   (through selectors or logic). So modifying the component may mean modifying the capture code
+   ... Selectors is an implementation detail of the component. Not ideal. Best would be to write 
+   the event handling logic based on the component specification. For example, selector.onclik <-
+    next (...), where selector is computed as find(.button with text...) under the element `el`..
+    . complex. Can't think of a case where it is worth the trouble.
+   - SO 1 and 2 are acceptable with 2 the preferred option when possible. In 2, the component 
+   needs not know ANYTHING about its context - zero dependency. But it needs carefully anticipate
+    the needs of its context/consumers and surface that in its API
 - change build: pkg does not publish anymore, reinstall nd rety
   - does not work with codesndbox playground (CORS error having nothing to do with CORS)
   - if it does not work, reverse to a rollup build...

@@ -16,11 +16,13 @@ export function tryCatch(fn, errCb) {
  * @returns {logAndRethrow}
  */
 export const logAndRethrow = function logAndRethrowCurried(debug, errMsg) {
-  // TODO : I should also catch errors occuring there and pass it to the debugEmitter
   return function logAndRethrow(e, args) {
-    debug && debug.console && debug.console.error(`logAndRethrow :> errors`, errMsg, e);
-    debug && debug.console && debug.console.error(`logAndRethrow :> args `, args);
+    debug &&
+    debug.console &&
+    debug.console.error(`logAndRethrow :> errors`, errMsg, e);
+    debug &&
+    debug.console &&
+    debug.console.error(`logAndRethrow :> args `, args);
     throw e;
   };
-}
-
+};
