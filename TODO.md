@@ -1,3 +1,8 @@
+# Tests
+- refactor image_gallery_component_specs
+  - it is worth showing tests running live in the browsers
+  - remove dependency on staet-transducer and entry actions!
+  - also don't do the tests by recomputing stuff but with PBT!!!
 # API
 - simplify
   - preprocessor default x => x
@@ -5,7 +10,6 @@
   - no initial event:
     <Machine ...>
       <Comp slot='default' />
-      <Comp />
     <Machine .../>
   - try to see how to hve the renderWith component as a slot/child of <Machine>
 # Build
