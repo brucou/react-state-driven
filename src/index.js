@@ -1,2 +1,2 @@
-export { Machine, testMachineComponent, getStateTransducerRxAdapter , getEventEmitterAdapter } from "./Machine";
+export { Machine } from "./Machine";
 export { NO_STATE_UPDATE, COMMAND_RENDER } from "./properties";

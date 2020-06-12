@@ -13,16 +13,12 @@ export function tryCatch(fn, errCb) {
  *
  * @param {{console, debugEmitter, connection}} debug
  * @param errMsg
- * @returns {logAndRethrow}
+ * @returns {logError}
  */
-export const logAndRethrow = function logAndRethrowCurried(debug, errMsg) {
-  return function logAndRethrow(e, args) {
+export const logError = function logErrorCurried(debug, errMsg) {
+  return function logError(e, args) {
     debug &&
     debug.console &&
-    debug.console.error(`logAndRethrow :> errors`, errMsg, e);
-    debug &&
-    debug.console &&
-    debug.console.error(`logAndRethrow :> args `, args);
-    throw e;
+    debug.console.error(`An error occurred while executing: `, errMsg, args, e);
   };
 };
