@@ -6,6 +6,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var React = require('react');
 var React__default = _interopDefault(React);
+var emitonoff = _interopDefault(require('emitonoff'));
 
 var noop = function noop() {};
 var emptyConsole = {
@@ -44,12 +45,47 @@ var logError = function logErrorCurried(debug, errMsg) {
     debug && debug.console && debug.console.error("An error occurred while executing: ", errMsg, args, e);
   };
 };
+var getEventEmitterAdapter = function getEventEmitterAdapter(emitonoff) {
+  var eventEmitter = emitonoff();
+  var DUMMY_NAME_SPACE = "_";
+  var subscribers = [];
+  var subject = {
+    next: function next(x) {
+      try {
+        eventEmitter.emit(DUMMY_NAME_SPACE, x);
+      } catch (e) {
+        subject.error(e);
+      }
+    },
+    error: function error(e) {
+      throw e;
+    },
+    complete: function complete() {
+      return subscribers.forEach(function (f) {
+        return eventEmitter.off(DUMMY_NAME_SPACE, f);
+      });
+    },
+    subscribe: function subscribe(_ref) {
+      var f = _ref.next,
+          errFn = _ref.error,
+          __ = _ref.complete;
+      subscribers.push(f);
+      eventEmitter.on(DUMMY_NAME_SPACE, f);
+      subject.error = errFn;
+      return {
+        unsubscribe: subject.complete
+      };
+    }
+  };
+  return subject;
+};
 
 function _inheritsLoose(subClass, superClass) {
   subClass.prototype = Object.create(superClass.prototype);
   subClass.prototype.constructor = subClass;
   subClass.__proto__ = superClass;
 }
+var MOUNTED = "mounted";
 
 var COMMAND_HANDLER_EXEC_ERR = function COMMAND_HANDLER_EXEC_ERR(command) {
   return "handler for command " + command;
@@ -76,16 +112,18 @@ var Machine = /*#__PURE__*/function (_Component) {
     _this.rawEventSource = null;
     _this.subscription = null;
     return _this;
-  } // NOTE: An interface like <Machine ...><RenderComponent></Machine> is not possible in React/jsx syntax
-  // When passed as part of a `props.children`, the function component would be transformed into a react element
-  // and hence can no longer be used. We do not want the react element, we want the react element factory...
-  // It is thereforth necessary to pass the render component as a property (or use a render prop pattern)
+  } // NOTE: An interface like <Machine ...><RenderComponent></Machine> is
+  // not possible in React/jsx syntax. When passed as part of a `props.children`,
+  // the function component would be transformed into a React element,
+  // and hence can no longer be used. We do not want the React element, we want
+  // the react element factory... It is thereforth necessary to pass the
+  // render component as a property (or use a render prop pattern)
 
 
   var _proto = Machine.prototype;
 
   _proto.componentDidMount = function componentDidMount() {
-    var _Object$assign, _Object$assign2;
+    var _ref, _Object$assign, _Object$assign2;
 
     var machineComponent = this; // TODO: I should use React props checking mechanism for this
     // try {assertPropsContract(machineComponent.props);} catch (e) {console.error(e); return}
@@ -97,22 +135,26 @@ var Machine = /*#__PURE__*/function (_Component) {
         commandHandlers = _machineComponent$pro.commandHandlers,
         effectHandlers = _machineComponent$pro.effectHandlers,
         options = _machineComponent$pro.options,
-        renderWith = _machineComponent$pro.renderWith;
-    var initialEvent = options && options.initialEvent;
+        renderWith = _machineComponent$pro.renderWith; // initial event is optional. Use it for instance if you want to pass data with the event
+    // or if you use the "mounted" string of characters for other purposes
+    // or if simply you want to completely decouple the machine from the component
+
+    var initialEvent = options && options.initialEvent || (_ref = {}, _ref[MOUNTED] = void 0, _ref); // `debug` is optional. As of now, includes the console to log debugging info
+
     var debug = options && options.debug || null;
 
     var _console = debug && debug.console || emptyConsole; // Wrapping the user-provided API with tryCatch to detect error early
 
 
     var wrappedFsm = tryCatch(_fsm, logError(debug, "the state machine!"));
-    this.rawEventSource = eventHandler;
+    this.rawEventSource = eventHandler || getEventEmitterAdapter(emitonoff);
 
     var _next = tryCatch(this.rawEventSource.next.bind(this.rawEventSource), logError(debug, "the event handler's 'next' function!"));
 
     var commandHandlersWithRenderHandler = Object.assign({}, commandHandlers, (_Object$assign = {}, _Object$assign[COMMAND_RENDER] = function renderHandler(next, params, effectHandlersWithRender) {
       effectHandlersWithRender[COMMAND_RENDER](machineComponent, renderWith, params, next);
     }, _Object$assign));
-    var effectHandlersWithRender = effectHandlers && effectHandlers[COMMAND_RENDER] ? effectHandlers : Object.assign((_Object$assign2 = {}, _Object$assign2[COMMAND_RENDER] = defaultRenderHandler, _Object$assign2), effectHandlers);
+    var effectHandlersWithRender = effectHandlers && effectHandlers[COMMAND_RENDER] ? effectHandlers : Object.assign((_Object$assign2 = {}, _Object$assign2[COMMAND_RENDER] = defaultRenderHandler, _Object$assign2), effectHandlers || {});
     var preprocessedEventSource = tryCatch(preprocessor || function (x) {
       return x;
     }, logError(debug, "the preprocessor!"))(this.rawEventSource);
@@ -176,6 +218,7 @@ var Machine = /*#__PURE__*/function (_Component) {
 // }
 
 exports.COMMAND_RENDER = COMMAND_RENDER;
+exports.MOUNTED = MOUNTED;
 exports.Machine = Machine;
 exports.NO_STATE_UPDATE = NO_STATE_UPDATE;
 //# sourceMappingURL=index.js.map

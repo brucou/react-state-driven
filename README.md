@@ -22,259 +22,129 @@
 # Motivation
 User interfaces are reactive systems which can be modelized accurately by state machines. There 
 is a number of state machine libraries in the field with varying design objectives. We have proposed
- an extended state machine library with a minimal API, architected around a single causal, 
- effect-less function. This particular design requires integration with the interfaced 
- systems, in order to produce the necessary effects (user events, system events, user actions). We
- present here an integration of our [proposed machine library](https://github.com/brucou/state-transducer) with `React`. 
-
-This document is structured as follows :
-
-- we quickly present the rationale behind modelling user interfaces with state machines and the 
-resulting architecture
-- we continue with our API design goals
-- we finally explain and document the actual API together with a [simple example](#example) of use, 
-taken from other similar libraries
-
-# Modelling user interfaces with state machines
-We are going all along to refer to a image search application example to illustrate our 
-argumentation. Cf. [Example section](#example) for more details.
-
-In a traditional architecture, a simple scenario would be expressed as follows :
-
-![image search basic scenario](assets/Image%20search%20scenario.png)
-
-What we can derive from that is that the application is interfacing with other systems : the user
- interface and what we call external systems (local storage, databases, etc.). The application 
- responsibility is to translate user actions on the user interface into commands on the external systems, execute those commands and deal with their result.
-
-In our proposed architecture, the same scenario would become :
-
-![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
-
-In that architecture, the application is refactored into a mediator, a preprocessor, a state 
-machine, a command handler, and an effect handler. The application is thus split into smaller parts 
-which address specific concerns :
-- the preprocessor translates user interface events into inputs for the state machine
-- the state machine computes the commands to execute as a result of its present and past inputs, 
-or, what is equivalent, its present input and current state 
-- the command handler interprets and executes incoming commands, delegating the execution of 
-effects to the effect handler when necessary
-- the mediator orchestrates the user interface, the preprocessor, the state machine and the command 
-handler
-
-While the architecture may appear more complex (isolating concerns means more parts), we have 
-reduced the complexity born from the interconnection between the parts. 
-
-Concretely, we increased the testability of our implementation :
-- the mediator algorithm is the same independently of the pieces it coordinates. This means it 
-can be written and tested once, then reused at will. This is our `<Machine />` component. **This is
- glue code that you do not have to write and test anymore**
-- effect handlers are pretty generic pieces of code. An example could be code to fetch a 
-resource. That code is written and tested once (and comes generally tested out of the box), and 
-then reused for any resource. Additionally, only the effect handlers can perform effects on the 
-external systems, which helps testing, tracing and debugging[^3]
-- effect handlers, being isolated in their own module, are easy to mock, without resorting to 
-a complex machinery specific to a testing library
-- the state machine is a function which **performs no effects**, and whose output exclusively depends 
-on current state, and present input[^2]. We will use the term *causal* functions for such 
-functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
-exhibit the same property[^1]. The causality property means state machines are a breeze
- to reason about and test (well, not as much as pure functions, but infinitely better than 
- effectful functions)
-- only the preprocessor and mediator can perform effects on the user interface, which helps 
-testing, tracing and debugging 
-
-We also have achieved greater modularity: our parts are coupled only through their interface. For
- instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate) if the need be, or to a barebone event emitter (like `emitonoff`) by simply building interface adapters.
-
-There are more benefits but this is not the place to go about them. Cf:
-- [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
-- [Pure UI](https://rauchg.com/2015/pure-ui)
-- [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
-
-[^3]: Command handlers can only perform effects internally (for instance async. communication 
-with the mediator)    
-[^2]: In relation with state machines, it is the same to say that 
-      an output depends exclusively on past and present inputs and that an output exclusively depends 
-      on current state, and present input.    
-[^1]: Another term used elsewhere is *deterministic* functions, but we 
-      found that term could be confusing.          
+ a state machine library with a minimal API, consisting of a single effect-less function. 
+ 
+ In this particular design, the machine is a function which takes inputs (events to be processed 
+ by the machine) and outputs commands to be executed. While it is entirely possible to modelize 
+ an entire web application with state machines, a common use case is to modelize a
+ component, and reuse that component. 
+ 
+ This library proposes an integration of the Kingly state machine library with React that takes 
+ the shape of a `<Machine />` component which can be used in a React application like any other 
+ components. The `<Machine />` component will listen to user events, compute commands and execute
+  them, generally leading to updating the screen.
 
 # Installation
-> `react`  is a peer dependency.
+`react`  is a peer dependency. The component has been tested with React 16.4 and above. It may 
+however work with lower versions of React as it does not use hooks, context, etc. If you 
+encounter an issue with a given version of React, please log an issue.
 
 ```sh
 npm install react-state-driven
 ```
 
-# Code examples
-For the impatient ones, you can directly review the available demos:
- 
-| Code playground | Machine | Screenshot |  
-|:----|:----:|:----:|
-|[flickr image search](https://github.com/brucou/flickr-search-app)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
-|[TMDb movie search](https://codesandbox.io/s/ym8vpqm7m9)| ![graph](https://github.com/brucou/movie-search-app/raw/specs-all/article/movie%20search%20good%20fsm%20corrected%20flowchart%20no%20emphasis%20switchMap.png)| ![TMDb online interface screenshot](https://github.com/brucou/movie-search-app/raw/specs-all/article/app%20screenshot%20query%20detail%20-%20success.png)|
-
-
-
-# API design goals
-We want to have an integration which is generic enough to accommodate a large set of use cases, 
-and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
-and API. Unit-testing should ideally be based on the specifications of the behaviour of the 
-component rather than its implementation details, and leverage the automatic test generator of 
-the underlying `state-tranducer` library. In particular :
-
-- it should be seamless to use both controlled and uncontrolled components
-- it should be possible to use without risk of interference standard React features like `Context`
-- it should use the absolute minimum React features internally, in order to favor for instance a 
-painless port to React copycats (Preact, etc.)
-- non-React functionalities should be coupled only through interfaces, allowing to use any 
-suitable implementation
-- the specifics of the implementation should not impact testing (hooks, suspense, context, etc.)
-
-As a result of these design goals :
-- we do not use React hooks, context, portal, fragments, `jsx`, and use the minimum React lifecycle 
-hooks
-- the component user can of course use the whole extent of the API at disposal, those restrictions 
-only concern our implementation of the `<Machine />` component.
-- we defined interfaces for extended state updates (reducer interface), event processing 
-(observer and observable interfaces).
-- any state machine implementation (including one that uses no dedicated library) can be 
-substituted to our library provided that it respects the machine interface and contracts: 
-  - the machine is implemented by a function
-  - it takes an unique input parameter of the shape `{[event name]: event data}`
-  - it returns an array of commands
-  - it produces no effects
-- we use dependency injection to pass the modules responsible for effects to the `<Machine />` component
-
 # API
-## ` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith />`
 
-### Description
+## ` <Machine fsm, renderWith, commandHandlers, eventHandler?, preprocessor?, effectHandlers?, 
+options?, 
+/>`
+
 We expose a `<Machine />` React component which will hold the state machine and implement its 
-behaviour using React's API. The `Machine` component behaviour is specified by its props. Those 
-props reflect : the underlying machine, pre-processing of interfaced 
-system's raw events, a set of functions executing machine commands and effects on the 
-interfaced systems. The DOM rendering command handler is imposed by the `<Machine />` component 
-but can be customized via `effectHandlers[COMMAND_RENDER]` (see example).
+behaviour using React's API. The `Machine` component behaviour is specified by its props. 
 
-Our `Machine` component expects some props but does not expect children components. 
+There are 3 mandatory props and four optional props. The three mandatory props are the machine 
+specifying the component's behavior, the component to render the screens with, and the command 
+handlers to execute the commands computed by the machine.
 
-### Example
-To showcase usage of our react component with our machine library, we will implement an [image 
-search application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
+The four optional props exists to address more complex use cases without modifying the 
+`<Machine/>` component. This is in line with the open-closed principle which states that 
+"software entities (classes, modules, functions, etc.) should be open for extension, but closed for modification". 
+
+We will examine these use cases in a dedicated section. Let's now describe the semantics of the 
+component:
+
+- When the React `Machine` component is mounted, the `fsm` machine will be sent an event 
+(called `MOUNTED` by default, and configurable in `options.initialEvent`). From that event, the 
+machine generally computes the initial screen to be rendered. In fact the machine computes a 
+`RENDER` command, which include the props for the `renderWith` component whose single 
+responsibility is to render the screens for the `Machine` component.
+  - Assuming `fsm({[MOUNTED]: void 0}) = [{command: RENDER, params: initialProps}]`, and 
+  `renderWith = Component` the screen `<Component next {...initialProps} />` will be displayed when 
+  the `Machine` component is mounted
+- The `<Component />` rendering screens is injected by `<Machine />` with a `next` prop, which is
+ an event dispatcher whose end is connected to the `fsm` machine. That means that `next(event)` 
+ will trigger the computation of `fsm(event)`. The `next` prop is thus used by the `Component` to
+  pass events that to the machine. Typically, as `Component` only handles rendering, the 
+  aforementioned events are DOM or user events.
+- The `fsm` machine computes commands in response to received events. The `commandHandlers` 
+prop assigns handlers for every possible command generated by the machine. Computed commands are 
+executed with the dedicated handler. Handlers are passed the `next` dispatcher as it is often 
+necessary to pass back to the machine the results of an executed command. For instance, if a 
+command fetches remote data, that remote data may be fed back to the machine in the shape of a 
+`SUCCESS` event. Conversely, an `ERROR` event may be sent back to indicate that the fetching has 
+failed.  
+
+The previous paragraph describes how the mandatory props (`fsm`, `renderWith`, `commandHandlers`)
+ are used. Let's talk about the optional props:
+ 
+ - `eventHandler` defaults to a minimal event emitter based on `emitonoff`, a 300B library. You 
+ can provide your own event emitter fitting your own purposes. The event handler must adhere to 
+ an interface similar to that of Rx.js Subjects, i.e. needs to have a `next`, `error`, `complete`
+  methods, in addition to a `subscribe` method. This means that using a Subject as event handler 
+  is as easy as `eventHandler = new Rx.Subject()`
+- the `preprocessor` is receiving all events sent by the `next` dispatcher and converting them 
+into events for the `fsm` machine. The preprocessor defaults to `x => x` i.e. the identity 
+function. 
+- `effectHandlers` allows command handlers to be more single-concern. Executing a command may 
+involve realizing and coordinating several effects. In a clean architecture, the command handlers
+ should only orchestrate the sequence of effects realizing the commands, and  the effects should 
+ only, well, execute a single effect. This is useful for testing purposes, as orchestration can 
+ be tested separately from effect execution. 
+- `options` is designed to be a bag that gathers all customization opportunities which do not 
+belong to any of the other classifications. As of now, it includes an `initialEvent` property 
+which configured the event that will be run through the machine when mounting the `<Machine />` 
+component 
+
+|Option|Use case| 
+|---|---|
+| eventHandler |- pass events from outside the component or from outside the DOM, for instance to communicate with other components|
+|preprocessor|- convert one DOM event into one semantic event. For instance, convert a button click (no semantics) into a search intent or submit intent (note the semantics).|
+| |- aggregate several DOM events into one event. For instance, throttle button clicks|
+| |- pass events from outside the component or from outside the DOM, for instance to communicate with other components|
+|effectHandlers|- large component, or complex behavior where clean code matters|
+| |- customizing render handler (default is React.setState), for instance running some operations before or after rendering|
+|options|- configure initial event. This also entirely decouples the `fsm` machine from the `Machine` component|
+
+Note that our `Machine` component expects some props but does not expect children components. 
+
+We provide two examples, one illustrating the mandatory props, the second illustrating all optional props.
+
+## Example with mandatory props
+This example only uses the mandatory props. It also uses JSX, and JSON patch to update the 
+machine's extended state. We use JSON patch mainly to provide an example of configuration of 
+`updateState` property. You may use a simple `Object.assign`-based reducer, or Immer or any other
+ reducing function.
+
+The demo application can be evaluated in a [codesandbox playground](https://codesandbox.io/s/react-movie-app-state-driven-with-default-options-18m62?file=/src/MovieSearch.js).
+
+## Example with optional props
+This example uses the optional props. It uses hyperscripts instead of JSX and a Rxjs Subject for 
+event emitter, and JSON patch to update the machine's extended state.
+
+We will implement an [image search application](https://css-tricks.com/robust-react-user-interfaces-with-finite-state-machines/#article-header-id-5). 
 That application basically takes an input from the user, looks up images related
- to that search input, and displays it. The user can then click on a particular image to see it 
+ to that search input, and displays them. The user can then click on a particular image to see it 
  in more details. 
 
-For illustration, the user interface starts like this :
+For illustration, the user interface starts like this:
 
 ![image search interface](https://i.imgur.com/mDQQTX8.png?1) 
 
-[Click here](https://codesandbox.io/s/yklw04n7qj) for a live demo.
+[Click here](https://codesandbox.io/s/flickr-search-app-with-kingly-qivl3) for a live demo.
 
 The user interface behaviour can be modelized by the following machine:
 
 ![machine visualization](assets/image%20gallery%20state%20cat.png)
-
-Let's see how to integrate that into a React codebase using our `Machine` component.
-
-#### Encoding the machine graph
-The machine is translated into the data structure expected by the supporting `state-transducer` 
-library:
-
-```javascript
-import { NO_OUTPUT } from "state-transducer";
-import { COMMAND_SEARCH, NO_ACTIONS, NO_STATE_UPDATE } from "./properties";
-import { applyJSONpatch, renderAction, renderGalleryApp } from "./helpers";
-
-export const imageGalleryFsmDef = {
-  events: [
-    "START",
-    "SEARCH",
-    "SEARCH_SUCCESS",
-    "SEARCH_FAILURE",
-    "CANCEL_SEARCH",
-    "SELECT_PHOTO",
-    "EXIT_PHOTO"
-  ],
-  states: { init: "", start: "", loading: "", gallery: "", error: "", photo: "" },
-  initialControlState: "init",
-  initialExtendedState: {
-    query: "",
-    items: [],
-    photo: undefined,
-    gallery: ""
-  },
-  transitions: [
-    { from: "init", event: "START", to: "start", action: NO_ACTIONS },
-    { from: "start", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    {
-      from: "loading",
-      event: "SEARCH_SUCCESS",
-      to: "gallery",
-      action: (extendedState, eventData, fsmSettings) => {
-        const items = eventData;
-
-        return {
-          updates: [{ op: "add", path: "/items", value: items }],
-          outputs: NO_OUTPUT
-        };
-      }
-    },
-    {
-      from: "loading",
-      event: "SEARCH_FAILURE",
-      to: "error",
-      action: NO_ACTIONS
-    },
-    {
-      from: "loading",
-      event: "CANCEL_SEARCH",
-      to: "gallery",
-      action: NO_ACTIONS
-    },
-    { from: "error", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    { from: "gallery", event: "SEARCH", to: "loading", action: NO_ACTIONS },
-    {
-      from: "gallery",
-      event: "SELECT_PHOTO",
-      to: "photo",
-      action: (extendedState, eventData, fsmSettings) => {
-        const item = eventData;
-
-        return {
-          updates: [{ op: "add", path: "/photo", value: item }],
-          outputs: NO_OUTPUT
-        };
-      }
-    },
-    { from: "photo", event: "EXIT_PHOTO", to: "gallery", action: NO_ACTIONS }
-  ],
-  entryActions: {
-    loading: (extendedState, eventData, fsmSettings) => {
-      const { items, photo } = extendedState;
-      const query = eventData;
-      const searchCommand = {
-        command: COMMAND_SEARCH,
-        params: query
-      };
-      const renderGalleryAction = renderAction({ query, items, photo, gallery: "loading" });
-
-      return {
-        outputs: [searchCommand].concat(renderGalleryAction.outputs),
-        updates: NO_STATE_UPDATE
-      };
-    },
-    photo: renderGalleryApp("photo"),
-    gallery: renderGalleryApp("gallery"),
-    error: renderGalleryApp("error"),
-    start: renderGalleryApp("start")
-  },
-  updateState: applyJSONpatch,
-}
-
-```
 
 Note: 
 - how the black bullet (entry point) from our machine graph corresponds to a `init` control 
@@ -284,22 +154,20 @@ represented in the machine
 - `initialControlState` and `initialExtendedState` encode the initial state for the machine
 - the `transitions` property of the machine encodes the edges of the graph that modelizes the 
 behaviour of the interface
-- every control state entry will lead to displaying some screens. In order not to repeat that 
-logic, we extract it into the `entryActions` property and we will use later the corresponding 
-`state-transducer` plugin which makes use of this data
 - `updateState` specifies how to update the extended state of the machine from a description of 
 the updates to perform. We use [JSON patch](http://jsonpatch.com/) in our example. A redux-like 
 reducer, proxy-based `immer.js` or any user-provided function could also be used, as long as it 
 respects the defined interface.
 
-#### A stateless component to render the user interface
+### A stateless component to render the user interface
 The machine **controls** the user interface via the issuing of render commands, which include 
 *props* for a user-provided React component. Here, those *props* are fed into `GalleryApp`, which
  renders the interface: 
  
  ```javascript
 export function GalleryApp(props){
-  // NOTE: `query` is not used! :-) Because we use a uncontrolled component, we need not use query
+  // NOTE: `query` is not used! :-) Because we use a uncontrolled component, we need not 
+  // keep track of the value of the input field
   const { query, photo, items, next, gallery: galleryState } = props;
 
   return div(".ui-app", { "data-state": galleryState }, [
@@ -325,11 +193,10 @@ export function GalleryApp(props){
 
 Note:
 - `GalleryApp` is a **stateless functional component** which only concerns itself with rendering 
-the interface. The interface state concerns (representation, storage, retrieval, update, etc.) are 
-handled by the state machine.
+the user interface, i.e. a pure React component.
 
 
-#### Implementing the user interface with `<Machine />` 
+### Implementing the user interface with `<Machine />` 
 We have our state machine defined, we have a component to render the user interface. We now have 
 to implement the full user interface, e.g. processing events, and execute the appropriate 
 commands in response. As we will use the `<Machine />` component, we have to 
@@ -422,8 +289,7 @@ export const imageGalleryReactMachineDef = {
 
 Note:
 - we render the user interface with the `GalleryApp` component (`renderWith`)
-- we use Rxjs for event handling between the component and the 
-interfaced systems
+- we use Rxjs for event handling between the component and the interfaced systems
 - we kick start the machine with the `START` event (`options.initialEvent`)
 - inputs received from the interfaced systems (network responses or user inputs) are translated 
 into inputs for the state machine by the preprocessor (`preprocessor`)
@@ -446,18 +312,9 @@ import { imageGalleryReactMachineDef } from "./imageGalleryReactMachineDef";
 import h from "react-hyperscript";
 import {
   createStateMachine,
-  decorateWithEntryActions,
-  fsmContracts
-} from "state-transducer";
+} from "kingly";
 
-const fsmSpecsWithEntryActions = decorateWithEntryActions(
-  imageGalleryFsmDef,
-  imageGalleryFsmDef.entryActions,
-  null
-);
-const fsm = createStateMachine(fsmSpecsWithEntryActions, {
-  debug: { console, checkContracts: fsmContracts }
-});
+const fsm = createStateMachine(imageGalleryFsmDef, {});
 
 ReactDOM.render(
   // That is the same as <Machine fsm=... preprocessor=... ... />
@@ -466,13 +323,6 @@ ReactDOM.render(
 );
 
 ```
-
-Note:
-- `decorateWithEntryActions` which a plugin which allows to have a given machine produce 
-predefind actions on entering a control state. We use it here to render a given screen on entry 
-in a given control state. 
-- debug options can be configured as needed. Currently trace messages can be output to a `console` 
-passed by the API user. Additionally, machine contracts can be checked (useful in development mode) 
 
 ### A typical machine run
 Alright, now let's leverage the example to explain what is going on here together with the 
@@ -534,7 +384,7 @@ is in-flight) either reusing rxjs capabilities (`switchMap`) or at the machine l
  of state)
 
 ### Types
-Types contracts can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
+Types  can be found in the [repository](https://github.com/brucou/react-state-driven/tree/master/types). 
 
 ### Contracts
 - command handlers delegate **all effects on external systems** through the effect handler module
@@ -581,8 +431,120 @@ defined, with all of them being **synchronous** functions) and the `Observable` 
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
-## `testMachineComponent(testAPI, testScenario, machineDefinition)`
-Cf. [Testing](./Testing.md)
+
+  
+This document is structured as follows:
+
+
+- we quickly present the rationale behind modelling user interfaces with state machines and the 
+resulting architecture
+- we continue with our API design goals
+- we finally explain and document the actual API together with a [simple example](#example) of use, 
+taken from other similar libraries
+
+# Modelling user interfaces with state machines
+We are going all along to refer to a image search application example to illustrate our 
+argumentation. Cf. [Example section](#example) for more details.
+
+In a traditional architecture, a simple scenario would be expressed as follows:
+
+![image search basic scenario](assets/Image%20search%20scenario.png)
+
+What we can derive from that is that the application is interfacing with other systems : the user
+ interface and what we call external systems (local storage, databases, etc.). The application 
+ responsibility is to translate user actions on the user interface into commands on the external systems, execute those commands and deal with their result.
+
+In our proposed architecture, the same scenario would become:
+
+![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
+
+In that architecture, the application is refactored into a mediator, a preprocessor, a state 
+machine, a command handler, and an effect handler. The application is thus split into smaller parts 
+which address specific concerns :
+- the preprocessor translates user interface events into inputs for the state machine
+- the state machine computes the commands to execute as a result of its present and past inputs, 
+or, what is equivalent, its present input and current state 
+- the command handler interprets and executes incoming commands, delegating the execution of 
+effects to the effect handler when necessary
+- the mediator orchestrates the user interface, the preprocessor, the state machine and the command 
+handler
+
+While the architecture may appear more complex (isolating concerns means more parts), we have 
+reduced the complexity born from the interconnection between the parts. 
+
+Concretely, we increased the testability of our implementation :
+- the mediator algorithm is the same independently of the pieces it coordinates. This means it 
+can be written and tested once, then reused at will. This is our `<Machine />` component. **This is
+ glue code that you do not have to write and test anymore**
+- effect handlers are pretty generic pieces of code. An example could be code to fetch a 
+resource. That code is written and tested once (and comes generally tested out of the box), and 
+then reused for any resource. Additionally, only the effect handlers can perform effects on the 
+external systems, which helps testing, tracing and debugging[^3]
+- effect handlers, being isolated in their own module, are easy to mock, without resorting to 
+a complex machinery specific to a testing library
+- the state machine is a function which **performs no effects**, and whose output exclusively depends 
+on current state, and present input[^2]. We will use the term *causal* functions for such 
+functions, in  reference to [causal systems](https://en.wikipedia.org/wiki/Causal_system), which 
+exhibit the same property[^1]. The causality property means state machines are a breeze
+ to reason about and test (well, not as much as pure functions, but infinitely better than 
+ effectful functions)
+- only the preprocessor and mediator can perform effects on the user interface, which helps 
+testing, tracing and debugging 
+
+We also have achieved greater modularity: our parts are coupled only through their interface. For
+ instance, we use in our example below `Rxjs` for preprocessing events, and [`state-transducer`](https://github.com/brucou/state-transducer) as state machine library. We could easily switch to [`most`](https://github.com/cujojs/most) and [`xstate`](https://github.com/davidkpiano/xstate) if the need be, or to a barebone event emitter (like `emitonoff`) by simply building interface adapters.
+
+There are more benefits but this is not the place to go about them. Cf:
+- [User interfaces as reactive systems](https://brucou.github.io/posts/user-interfaces-as-reactive-systems/)
+- [Pure UI](https://rauchg.com/2015/pure-ui)
+- [Pure UI control](https://medium.com/@asolove/pure-ui-control-ac8d1be97a8d)
+
+[^3]: Command handlers can only perform effects internally (for instance async. communication 
+with the mediator)    
+[^2]: In relation with state machines, it is the same to say that 
+      an output depends exclusively on past and present inputs and that an output exclusively depends 
+      on current state, and present input.    
+[^1]: Another term used elsewhere is *deterministic* functions, but we 
+      found that term could be confusing.          
+
+# Code examples
+For the impatient ones, you can directly review the available demos:
+ 
+| Code playground | Machine | Screenshot |  
+|:----|:----:|:----:|
+|[TMDb movie search](https://codesandbox.io/s/ym8vpqm7m9)| ![graph](https://github.com/brucou/movie-search-app/raw/specs-all/article/movie%20search%20good%20fsm%20corrected%20flowchart%20no%20emphasis%20switchMap.png)| ![TMDb online interface screenshot](https://github.com/brucou/movie-search-app/raw/specs-all/article/app%20screenshot%20query%20detail%20-%20success.png)|
+|[flickr image search](https://codesandbox.io/s/flickr-search-app-with-kingly-qivl3?file=/src/index.js)| ![](./assets/image%20gallery%20state%20cat.png)| ![image search interface](https://i.imgur.com/mDQQTX8.png?1) |
+
+
+# API design goals
+We want to have an integration which is generic enough to accommodate a large set of use cases, 
+and specific enough to be able to take advantage as much as possible of the `React` ecosystem 
+and API. Unit-testing should ideally be based on the specifications of the behaviour of the 
+component rather than its implementation details, and leverage the automatic test generator of 
+the underlying `state-tranducer` library. In particular :
+
+- it should be seamless to use both controlled and uncontrolled components
+- it should be possible to use without risk of interference standard React features like `Context`
+- it should use the absolute minimum React features internally, in order to favor for instance a 
+painless port to React copycats (Preact, etc.)
+- non-React functionalities should be coupled only through interfaces, allowing to use any 
+suitable implementation
+- the specifics of the implementation should not impact testing (hooks, suspense, context, etc.)
+
+As a result of these design goals :
+- we do not use React hooks, context, portal, fragments, `jsx`, and use the minimum React lifecycle 
+hooks
+- the component user can of course use the whole extent of the API at disposal, those restrictions 
+only concern our implementation of the `<Machine />` component.
+- we defined interfaces for extended state updates (reducer interface), event processing 
+(observer and observable interfaces).
+- any state machine implementation (including one that uses no dedicated library) can be 
+substituted to our library provided that it respects the machine interface and contracts: 
+  - the machine is implemented by a function
+  - it takes an unique input parameter of the shape `{[event name]: event data}`
+  - it returns an array of commands
+  - it produces no effects
+- we use dependency injection to pass the modules responsible for effects to the `<Machine />` component
 
 # Tips and gotchas
 - most of the time `preprocessor` will just change the name of the event. You can 
