@@ -395,7 +395,7 @@ specifications
 the component's defined *props*
 
 ### Semantics
-- The `<Machine />` component :
+- The `<Machine />` component:
   - initializes the raw event source (subject) which receives and forwards all raw events 
   (user events and system events)
   - creates a global command handler to dispatch to user-defined command handlers
@@ -411,7 +411,7 @@ the component's defined *props*
 - The machine receives preprocessed events from the preprocessor and computes a set of commands 
 to be executed
 - The global command handler execute the incoming commands :
-  - if the command is a render command, the global handler execute directly the command in the 
+  - if the command is a render command, the global handler executes directly the command in the 
   context of the `<Machine/>` component
   - if the command is not a render command, the global handler dispatches the command to the 
   user-configured command handlers
@@ -431,16 +431,6 @@ defined, with all of them being **synchronous** functions) and the `Observable` 
 - The event source is terminated when the `<Machine/>` component is removed from the screen 
 (`componentWillUnmount` lifecycle method)
 
-
-  
-This document is structured as follows:
-
-
-- we quickly present the rationale behind modelling user interfaces with state machines and the 
-resulting architecture
-- we continue with our API design goals
-- we finally explain and document the actual API together with a [simple example](#example) of use, 
-taken from other similar libraries
 
 # Modelling user interfaces with state machines
 We are going all along to refer to a image search application example to illustrate our 
