@@ -1,23 +1,22 @@
 - [Motivation](#motivation)
-- [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
 - [Installation](#installation)
-- [Code examples](#code-examples)
-- [API design goals](#api-design-goals)
 - [API](#api)
-  * [` <Machine fsm, eventHandler, preprocessor, commandHandlers, effectHandlers, options, renderWith />`](#---machine-fsm--eventhandler--preprocessor--commandhandlers--effecthandlers--options--renderwith----)
-    + [Description](#description)
-    + [Example](#example)
-      - [Encoding the machine graph](#encoding-the-machine-graph)
-      - [A stateless component to render the user interface](#a-stateless-component-to-render-the-user-interface)
-      - [Implementing the user interface with `<Machine />`](#implementing-the-user-interface-with---machine----)
+  * [` <Machine fsm, renderWith, commandHandlers, eventHandler?, preprocessor?, effectHandlers?,](#---machine-fsm--renderwith--commandhandlers--eventhandler---preprocessor---effecthandlers--)
+  * [Example with mandatory props](#example-with-mandatory-props)
+  * [Example with optional props](#example-with-optional-props)
+    + [A stateless component to render the user interface](#a-stateless-component-to-render-the-user-interface)
+    + [Implementing the user interface with `<Machine />`](#implementing-the-user-interface-with---machine----)
       - [The final application set-up](#the-final-application-set-up)
     + [A typical machine run](#a-typical-machine-run)
     + [Types](#types)
     + [Contracts](#contracts)
     + [Semantics](#semantics)
-  * [`testMachineComponent(testAPI, testScenario, machineDefinition)`](#-testmachinecomponent-testapi--testscenario--machinedefinition--)
+- [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
+- [Code examples](#code-examples)
+- [API design goals](#api-design-goals)
 - [Tips and gotchas](#tips-and-gotchas)
 - [Prior art and useful references](#prior-art-and-useful-references)
+
 
 # Motivation
 User interfaces are reactive systems which can be modelized accurately by state machines. There 
@@ -45,9 +44,7 @@ npm install react-state-driven
 
 # API
 
-## ` <Machine fsm, renderWith, commandHandlers, eventHandler?, preprocessor?, effectHandlers?, 
-options?, 
-/>`
+## ` <Machine fsm, renderWith, commandHandlers, eventHandler?, preprocessor?, effectHandlers?, options? />`
 
 We expose a `<Machine />` React component which will hold the state machine and implement its 
 behaviour using React's API. The `Machine` component behaviour is specified by its props. 
