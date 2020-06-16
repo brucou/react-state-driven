@@ -21,8 +21,7 @@
 
 
 # Motivation
-User interfaces are reactive systems which can be modelized accurately by state machines. There 
-is a number of state machine libraries in the field with varying design objectives. We have proposed
+User interfaces are reactive systems which can be modelized accurately by state machines. There is a number of state machine libraries in the field with varying design objectives. We have proposed
  a state machine library with a minimal API, consisting of a single effect-less function. 
  
  In this particular design, the machine is a function which takes inputs (events to be processed 
@@ -343,10 +342,10 @@ What we can derive from that is that the application is interfacing with other s
 
 In our proposed architecture with all options used, the same scenario would become:
 
-![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
+![image search complete scenario](assets/Image%20search%20scenario%20with%20fsm.png)
 
 In our proposed architecture with only mandatory options used, the same scenario would become:
-![image search basic scenario](assets/Image%20search%20scenario%20with%20mandatory%20options.png)
+![image search simplified scenario](assets/Image%20search%20scenario%20with%20mandatory%20options.png)
 
     
 In that architecture, the application is refactored into a mediator, a preprocessor, a state 
