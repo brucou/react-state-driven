@@ -1,0 +1,24 @@
+title Image search scenario with mandatory options
+
+User ->  User interface : 'c'
+User ->  User interface : 'a'
+User ->  User interface : 't'
+User ->  User interface : Search
+note right of User interface : User searches for 'cat' images
+User interface -> +Mediator : button click
+Mediator -> +FSM : {SEARCH : 'cat'}
+FSM -> -Mediator : [ query 'cat' images, render ]
+Mediator -> +Command handler : query 'cat' images
+Command handler -> +External systems : fetch https://api.flickr.com/...
+External systems -> -Command handler :
+Command handler -> -Mediator :
+Mediator -> -User interface : render
+User interface ->  User :
+note right of External systems : successful search
+External systems -> Command handler : query results
+Command handler -> +Mediator : queried 'cat' images
+Mediator -> +FSM : {SEARCH_SUCCESS : { items: ... }}
+FSM -> -Mediator : [render]
+note right of User interface : Application displays cat images
+Mediator -> -User interface : render
+User interface ->  User :

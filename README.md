@@ -13,7 +13,7 @@
   * [Types](#types)
   * [Contracts](#contracts)
 - [Semantics](#semantics)
-- [Modelling user interfaces with state machines](#modelling-user-interfaces-with-state-machines)
+- [Architecture](#architecture)
 - [Code examples](#code-examples)
 - [API design goals](#api-design-goals)
 - [Tips and gotchas](#tips-and-gotchas)
@@ -330,7 +330,7 @@ Types  can be found in the [repository](https://github.com/brucou/react-state-dr
 - The event source is terminated when the `<Machine/>` component is removed from the screen (`componentWillUnmount` lifecycle method)
 
 
-# Modelling user interfaces with state machines
+# Architecture
 We are going all along to refer to a image search application example to illustrate our argumentation. Cf. [Example section](#example) for more details.
 
 In a traditional architecture, a simple scenario would be expressed as follows:
@@ -341,10 +341,14 @@ What we can derive from that is that the application is interfacing with other s
  interface and what we call external systems (local storage, databases, etc.). The application 
  responsibility is to translate user actions on the user interface into commands on the external systems, execute those commands and deal with their result.
 
-In our proposed architecture, the same scenario would become:
+In our proposed architecture with all options used, the same scenario would become:
 
 ![image search basic scenario](assets/Image%20search%20scenario%20with%20fsm.png)
 
+In our proposed architecture with only mandatory options used, the same scenario would become:
+![image search basic scenario](assets/Image%20search%20scenario%20with%20mandatory%20options.png)
+
+    
 In that architecture, the application is refactored into a mediator, a preprocessor, a state 
 machine, a command handler, and an effect handler. The application is thus split into smaller parts 
 which address specific concerns :
